@@ -90,7 +90,7 @@ MonoBehaviour:
       forceResolution: 0
       forcedPercentage: 100
   allowShaderVariantStripping: 1
-  enableSRPBatcher: 1
+  enableSRPBatcher: 0
   shaderVariantLogLevel: 0
   diffusionProfileSettings: {fileID: 0}
   diffusionProfileSettingsList: []
