@@ -59,46 +59,21 @@ public class ComputeShaderDemo : MonoBehaviour
 
     void InitGPUParticleSystem()
     {
-        ParticleSize = Marshal.SizeOf(typeof(GPUParticle));
-        //找到更新函数
-        gpuUpdateKernelIndex = particleComputeShader.FindKernel(computeShaderEntryPoint);
-
-
-    }
-
-    private void OnGUI()
-    {
-        GUILayout.Label("FPS:" + FPSManager.fps);
-        GUILayout.Label("按住屏幕滑动");
-        GUILayout.Space(30);
-
-        if (GUILayout.Button("重置粒子", GUILayout.Width(200), GUILayout.Height(150)))
-        {
-            RefershParticles(true);
-        }
-    }
-
-    void RefershParticles(bool bforce = false)
-    {
-        if (ParticleCout == currentParticleCout && !bforce)
-        {
-            return;
-        }
-
         if (!particleComputeShader || !particleMat)
         {
             return;
         }
 
+
+        ParticleSize = Marshal.SizeOf(typeof(GPUParticle));
+        //找到更新函数
+        gpuUpdateKernelIndex = particleComputeShader.FindKernel(computeShaderEntryPoint);
+
+
         currentParticleCout = ParticleCout;
         cpuParticleBuffer = null;
         cpuParticleBuffer = new GPUParticle[currentParticleCout];
-        if (gpuParticleBuffer != null)
-        {
-            gpuParticleRenderCommand.Release();
-            gpuParticleBuffer.Release();
-            gpuParticleBuffer = null;
-        }
+
         gpuThreadGroupNum = Mathf.CeilToInt((float)ParticleCout / WARP_SIZE);
         gpuParticleBuffer = new ComputeBuffer(ParticleCout, ParticleSize);
 
@@ -123,19 +98,23 @@ public class ComputeShaderDemo : MonoBehaviour
         gpuParticleRenderCommand.name = "GPUParticle";
         gpuParticleRenderCommand.DrawProcedural(transform.localToWorldMatrix, particleMat, 0, MeshTopology.Points, 1, currentParticleCout);
         Camera.main.AddCommandBuffer(UnityEngine.Rendering.CameraEvent.AfterEverything, gpuParticleRenderCommand);
-
     }
+
+    private void OnGUI()
+    {
+        GUILayout.Label("按住屏幕滑动");
+        GUILayout.Space(30);
+
+        if (GUILayout.Button("重置粒子", GUILayout.Width(200), GUILayout.Height(150)))
+        {
+            gpuParticleBuffer.SetData(cpuParticleBuffer);
+        }
+    }
+
 
     // Update is called once per frame
     void Update()
     {
-        RefershParticles();
-
-        if (Input.GetKeyDown(KeyCode.R))
-        {
-            //重置buffer 往compute shader 里更新自定义数据也是这样写
-            gpuParticleBuffer.SetData(cpuParticleBuffer);
-        }
 
         particleComputeShader.SetInt("shouldMove", Input.GetMouseButton(0) ? 1 : 0);
         //传递 int float Vector3 等数据 Vector2 和 Vector3 要转成 float[2],float[3] 才可以用，vector4可以直接用
