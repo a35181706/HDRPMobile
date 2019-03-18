@@ -54,7 +54,7 @@ public class MeshInstanceIndirectRenderSystem : ComponentSystem
         // We want to find all MeshInstanceIndirectRenderer & TransformMatrix combinations and render them
         m_InstanceRendererGroup = GetComponentGroup(typeof(MeshInstanceIndirectRenderer),
                                             typeof(TransformMatrix),
-                                            ComponentType.Exclude<MeshCulledComponent>());
+                                            ComponentType.Subtractive<MeshCulledComponent>());
 
     
     }

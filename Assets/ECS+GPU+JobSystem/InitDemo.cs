@@ -35,7 +35,7 @@ public class InitDemo : MonoBehaviour
             Vector3 pos = UnityEngine.Random.insideUnitSphere * sphereSize;
             pos.y = topY;
             var entity = entities[i];
-            entityMgr.SetComponentData(entity, new Translation { Value = pos });
+            entityMgr.SetComponentData(entity, new Position { Value = pos });
             entityMgr.SetComponentData(entity, new Rotation { Value = quaternion.euler(new float3(1.67f, 0, 0), math.RotationOrder.XYZ) });
             entityMgr.SetComponentData(entity, new GravityComponentData { mass = Random.Range(0.5f, 3f), delay = Random.Range(0, 10f) });
 
