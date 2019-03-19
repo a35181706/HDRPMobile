@@ -16,16 +16,15 @@ using UnityEngine.Experimental.PlayerLoop;
 /// 自己实现的基于DrawMeshInstanceIndirect渲染的ECS版本
 /// </summary>
 [UpdateAfter(typeof(PreLateUpdate.ParticleSystemBeginUpdateAll))]
-[UpdateAfter(typeof(MeshCullingBarrier))]
+[UpdateAfter(typeof(FrustumCullingBarrier))]
 [UnityEngine.ExecuteInEditMode]
-public class MeshInstanceIndirectRenderSystem : ComponentSystem
+public class InstanceIndirectRenderSystem : ComponentSystem
 {
-
-    List<MeshInstanceIndirectRenderer> m_CacheduniqueRendererTypes = new List<MeshInstanceIndirectRenderer>(10);
+    List<InstanceIndirectRenderer> m_CacheduniqueRendererTypes = new List<InstanceIndirectRenderer>(10);
     ComponentGroup m_InstanceRendererGroup;
 
     private ComputeBuffer argsBuffer;
-    private ComputeBuffer transformBuffer;
+    private ComputeBuffer []transformBuffers = null;
     //drawindrect是写死的5个，unity说的
     private uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
     Matrix4x4[] matrixBuffer;
@@ -48,17 +47,14 @@ public class MeshInstanceIndirectRenderSystem : ComponentSystem
             transforms.CopyTo(matricesSlice, beginIndex);
         }
     }
+
     protected override void OnCreateManager(int capacity)
     {
-
-        // We want to find all MeshInstanceIndirectRenderer & TransformMatrix combinations and render them
-        m_InstanceRendererGroup = GetComponentGroup(typeof(MeshInstanceIndirectRenderer),
+        m_InstanceRendererGroup = GetComponentGroup(typeof(InstanceIndirectRenderer),
                                             typeof(TransformMatrix),
-                                            ComponentType.Subtractive<MeshCulledComponent>());
-
-    
+                                            ComponentType.Subtractive<FurstumCulledComponent>());    
     }
-
+    UnityEngine.Rendering.CommandBuffer cmdBuffer;
     void InitBuffers()
     {
         if (bInit || !InitDemo.m_instance)
@@ -68,58 +64,67 @@ public class MeshInstanceIndirectRenderSystem : ComponentSystem
         bInit = true;
         argsBuffer = new ComputeBuffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
         int size = System.Runtime.InteropServices.Marshal.SizeOf(typeof(Matrix4x4));
-        matrixBuffer = new Matrix4x4[InitDemo.m_instance.swordCout];
-        transformBuffer = new ComputeBuffer(InitDemo.m_instance.swordCout, size);
+        matrixBuffer = new Matrix4x4[InitDemo.m_instance.earchSwordCout];
+        transformBuffers = new ComputeBuffer[InitDemo.m_instance.swordPrefabs.Length];
+
+        for (int i = 0;i < transformBuffers.Length;i++)
+        {
+            transformBuffers[i] = new ComputeBuffer(InitDemo.m_instance.earchSwordCout, size);
+        }
+
+        cmdBuffer = new UnityEngine.Rendering.CommandBuffer();
+
+        if (Camera.main.actualRenderingPath == RenderingPath.Forward)
+        {
+            Camera.main.AddCommandBuffer(UnityEngine.Rendering.CameraEvent.AfterForwardOpaque, cmdBuffer);
+        }
+        else if (Camera.main.actualRenderingPath == RenderingPath.DeferredShading)
+        {
+            Camera.main.AddCommandBuffer(UnityEngine.Rendering.CameraEvent.AfterGBuffer, cmdBuffer);
+        }
+
     }
+
+
 
     protected override void OnUpdate()
     {
         InitBuffers();
 
-        // We want to iterate over all unique MeshInstanceRenderer shared component data,
-        // that are attached to any entities in the world
         EntityManager.GetAllUniqueSharedComponentDatas(m_CacheduniqueRendererTypes);
 
         var forEachFilter = m_InstanceRendererGroup.CreateForEachFilter(m_CacheduniqueRendererTypes);
-
-        MeshInstanceIndirectRenderer render = default(MeshInstanceIndirectRenderer);
-
+        cmdBuffer.Clear();
         for (int i = 0; i != m_CacheduniqueRendererTypes.Count; i++)
         {
             var renderer = m_CacheduniqueRendererTypes[i];
 
-            if (renderer.mesh)
+            if (renderer.mesh && renderer.material)
             {
-                render = renderer;
-                break;
+                var transforms = m_InstanceRendererGroup.GetComponentDataArray<TransformMatrix>(forEachFilter, i);
+
+                CopyMatrices(transforms, 0, transforms.Length, matrixBuffer);
+
+                args[0] = (uint)renderer.mesh.GetIndexCount(renderer.subMesh);
+                args[1] = (uint)transforms.Length;
+                args[2] = (uint)renderer.mesh.GetIndexStart(renderer.subMesh);
+                args[3] = (uint)renderer.mesh.GetBaseVertex(renderer.subMesh);
+
+                transformBuffers[i-1].SetData(matrixBuffer);
+                argsBuffer.SetData(args);
+                renderer.material.SetBuffer("transformBuffer", transformBuffers[i - 1]);
+
+                //cmdBuffer.DrawMeshInstancedIndirect(renderer.mesh, renderer.subMesh, renderer.material,
+                //   -1, argsBuffer, 0, null);
+
+                Graphics.DrawMeshInstancedIndirect(renderer.mesh, renderer.subMesh, renderer.material,
+                    new Bounds(Vector3.zero, Vector3.one * 999), argsBuffer, 0, null, renderer.castShadows, renderer.receiveShadows);
+            }
+            else
+            {
+                args[0] = args[1] = args[2] = args[3] = 0;
             }
         }
-
-        var transforms = m_InstanceRendererGroup.GetComponentDataArray<TransformMatrix>(forEachFilter,1);
-        CopyMatrices(transforms, 0, transforms.Length, matrixBuffer);
-
-
-        if (render.mesh)
-        {
-            args[0] = (uint)render.mesh.GetIndexCount(render.subMesh);
-            args[1] = (uint)transforms.Length;
-            args[2] = (uint)render.mesh.GetIndexStart(render.subMesh);
-            args[3] = (uint)render.mesh.GetBaseVertex(render.subMesh);
-            
-            transformBuffer.SetData(matrixBuffer);
-            argsBuffer.SetData(args);
-            render.material.SetBuffer("transformBuffer", transformBuffer);
-            Graphics.DrawMeshInstancedIndirect(render.mesh, render.subMesh, render.material,
-                new Bounds(Vector3.zero, Vector3.one * 999), argsBuffer);
-
-            
-        }
-        else
-        {
-            args[0] = args[1] = args[2] = args[3] = 0;
-        }
-
-        
 
         m_CacheduniqueRendererTypes.Clear();
         forEachFilter.Dispose();
@@ -127,10 +132,13 @@ public class MeshInstanceIndirectRenderSystem : ComponentSystem
 
     protected override void OnDestroyManager()
     {
-        if (transformBuffer != null)
+        if (transformBuffers != null)
         {
-            transformBuffer.Release();
-            transformBuffer = null;
+            for (int i = 0; i < transformBuffers.Length; i++)
+            {
+                transformBuffers[i].Release();
+            }
+            transformBuffers = null;
             argsBuffer.Release();
             argsBuffer = null;
         }

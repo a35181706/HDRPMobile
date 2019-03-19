@@ -102,8 +102,8 @@ MonoBehaviour:
     mesh: {fileID: 4300000, guid: 7a154d6d51098b042b0d9a91e8a20e65, type: 2}
     material: {fileID: 2100000, guid: 06ef1a0f9b5154b41b7fcfc32bf83048, type: 2}
     subMesh: 0
-    castShadows: 0
-    receiveShadows: 0
+    castShadows: 1
+    receiveShadows: 1
 --- !u!114 &114907813547081792
 MonoBehaviour:
   m_ObjectHideFlags: 1

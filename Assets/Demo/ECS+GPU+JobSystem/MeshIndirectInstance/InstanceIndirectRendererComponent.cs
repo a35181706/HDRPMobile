@@ -8,7 +8,7 @@ using UnityEngine.Rendering;
 /// Specified by TransformMatrix associated with Entity.
 /// </summary>
 [Serializable]
-public struct MeshInstanceIndirectRenderer : ISharedComponentData
+public struct InstanceIndirectRenderer : ISharedComponentData
 {
     public Mesh mesh;
     public Material material;
@@ -18,4 +18,4 @@ public struct MeshInstanceIndirectRenderer : ISharedComponentData
     public bool receiveShadows;
 }
 
-public class MeshInstanceIndirectRendererComponent : SharedComponentDataWrapper<MeshInstanceIndirectRenderer> { }
+public class InstanceIndirectRendererComponent : SharedComponentDataWrapper<InstanceIndirectRenderer> { }
