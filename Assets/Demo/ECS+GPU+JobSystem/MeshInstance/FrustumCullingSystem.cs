@@ -9,20 +9,13 @@ using UnityEngine;
 
 [UnityEngine.ExecuteInEditMode]
 [UpdateAfter(typeof(FrustumCullingSystem))]
-public class FrustumCullingBarrier : BarrierSystem
+public class FrustumCullingBarrier : EntityCommandBufferSystem
 {
 }
 
 [UnityEngine.ExecuteInEditMode]
 public class FrustumCullingSystem : JobComponentSystem
 {
-    struct BoundingSphere
-    {
-        public ComponentDataArray<FurstumCullingComponent> sphere;
-        public ComponentDataArray<TransformMatrix> transform;
-        public EntityArray entities;
-        public readonly int Length;
-    }
 
     [BurstCompile]
     struct TransformCenterJob : IJobParallelForBatch
@@ -33,9 +26,10 @@ public class FrustumCullingSystem : JobComponentSystem
         public NativeArray<float4> oldCullStatus;
 
         [ReadOnly]
-        public ComponentDataArray<FurstumCullingComponent> sphere;
+        public NativeArray<FurstumCullingComponent> sphere;
         [ReadOnly]
-        public ComponentDataArray<TransformMatrix> transform;
+        public NativeArray<TransformMatrix> transform;
+
         public void Execute(int start, int count)
         {
             float4 x = (float4)0.0f;
@@ -118,8 +112,8 @@ public class FrustumCullingSystem : JobComponentSystem
     struct CullStatusUpdatejob : IJob
     {
         public EntityCommandBuffer commandBuffer;
-        [ReadOnly] public EntityArray entities;
-        public ComponentDataArray<FurstumCullingComponent> spheres;
+        [ReadOnly] public NativeArray<Entity> entities;
+        public NativeArray<FurstumCullingComponent> spheres;
         [DeallocateOnJobCompletion][ReadOnly] public NativeArray<float4> cullStatus;
         [DeallocateOnJobCompletion][ReadOnly] public NativeArray<float4> oldCullStatus;
         public void Execute()
@@ -196,13 +190,18 @@ public class FrustumCullingSystem : JobComponentSystem
             bottomDist = new float4(bottomPlaneDist),
         };
     }
-    [Inject] private BoundingSphere boundingSpheres;
-    [Inject] private FrustumCullingBarrier barrier;
+
+    ComponentGroup boudingSpheres;
+
     private Plane[] cameraPlanes;
-    protected override void OnCreateManager(int capacity)
+    protected override void OnCreateManager()
     {
         cameraPlanes = new Plane[6];
+
+        boudingSpheres = GetComponentGroup(typeof(FurstumCullingComponent),typeof(TransformMatrix));
+        
     }
+
 
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
@@ -228,10 +227,18 @@ public class FrustumCullingSystem : JobComponentSystem
                 planes[numCameras-Camera.allCamerasCount+i] = generatePlane(Camera.allCameras[i]);
         }
 
-        var centers = new NativeArray<float4>((boundingSpheres.Length + 3) & ~3, Allocator.TempJob);
-        var cullStatus = new NativeArray<float4>((boundingSpheres.Length + 3) & ~3, Allocator.TempJob);
-        var oldCullStatus = new NativeArray<float4>((boundingSpheres.Length + 3) & ~3, Allocator.TempJob);
-        var transJob = new TransformCenterJob {output = centers, oldCullStatus = oldCullStatus, sphere = boundingSpheres.sphere, transform = boundingSpheres.transform};
+        int Length = boudingSpheres.CalculateLength();
+        var centers = new NativeArray<float4>((Length + 3) & ~3, Allocator.TempJob);
+        var cullStatus = new NativeArray<float4>((Length + 3) & ~3, Allocator.TempJob);
+        var oldCullStatus = new NativeArray<float4>((Length + 3) & ~3, Allocator.TempJob);
+        var cullSpehre = boudingSpheres.ToComponentDataArray<FurstumCullingComponent>(Allocator.TempJob);
+        var transJob = new TransformCenterJob
+        {
+            output = centers,
+            oldCullStatus = oldCullStatus,
+            sphere = cullSpehre,
+            transform = boudingSpheres.ToComponentDataArray<TransformMatrix>(Allocator.TempJob),
+        };
         var cullJob = new FrustumCullJob
         {
             center = centers, culled = cullStatus,
@@ -239,15 +246,16 @@ public class FrustumCullingSystem : JobComponentSystem
         };
 
         // First run a job which calculates the center positions of the meshes and stores them as float4(x1,x2,x3,x4), float4(y1,y2,y3,y4), ..., float4(x5, x6, x7, x8)
-        var trans = transJob.ScheduleBatch(boundingSpheres.Length, 4, inputDeps);
+        var trans = transJob.ScheduleBatch(Length, 4, inputDeps);
         // Check four meshes at a time agains the plains, possible since we changed how positions are stored in the previous job
-        var cullHandle = cullJob.Schedule((boundingSpheres.Length + 3) / 4, 1, trans);
+        var cullHandle = cullJob.Schedule((Length + 3) / 4, 1, trans);
 
+        var bannair = new FrustumCullingBarrier();
         var cullStatusUpdateJob = new CullStatusUpdatejob
         {
-            commandBuffer = barrier.CreateCommandBuffer(),
-            entities = boundingSpheres.entities,
-            spheres = boundingSpheres.sphere,
+            commandBuffer = bannair.CreateCommandBuffer(),
+            entities = boudingSpheres.ToEntityArray(Allocator.TempJob),
+            spheres = cullSpehre,
             cullStatus = cullStatus,
             oldCullStatus = oldCullStatus
         };

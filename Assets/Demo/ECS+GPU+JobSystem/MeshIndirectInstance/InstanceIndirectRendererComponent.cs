@@ -18,4 +18,4 @@ public struct InstanceIndirectRenderer : ISharedComponentData
     public bool receiveShadows;
 }
 
-public class InstanceIndirectRendererComponent : SharedComponentDataWrapper<InstanceIndirectRenderer> { }
+public class InstanceIndirectRendererComponent : SharedComponentDataProxy<InstanceIndirectRenderer> { }

@@ -11,7 +11,7 @@ public struct GravityComponentData : IComponentData {
     public float velocity;
 }
 
-public class GravityComponent : ComponentDataWrapper<GravityComponentData>
+public class GravityComponent : ComponentDataProxy<GravityComponentData>
 {
 
 }

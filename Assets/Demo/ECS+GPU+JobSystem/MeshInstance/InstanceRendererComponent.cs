@@ -19,5 +19,5 @@ public struct InstanceRenderer : ISharedComponentData
     public bool                 receiveShadows;
 }
 
-public class InstanceRendererComponent : SharedComponentDataWrapper<InstanceRenderer> { }
+public class InstanceRendererComponent : SharedComponentDataProxy<InstanceRenderer> { }
 

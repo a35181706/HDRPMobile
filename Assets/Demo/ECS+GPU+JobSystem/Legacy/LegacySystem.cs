@@ -5,7 +5,6 @@ using Unity.Entities;
 using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Transforms;
-using Unity.Rendering;
 public class LegacySystem : MonoBehaviour {
 
     public int swordCout = 1000 * 10;
@@ -30,8 +29,8 @@ public class LegacySystem : MonoBehaviour {
             meshRd.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             meshRd.receiveShadows = false;
             var dropComponent = go.AddComponent<LagacyDrop>();
-            dropComponent.delay = Random.Range(0, 10f);
-            dropComponent.mass = Random.Range(0.5f, 3f);
+            dropComponent.delay = UnityEngine.Random.Range(0, 10f);
+            dropComponent.mass = UnityEngine.Random.Range(0.5f, 3f);
 
             Vector3 pos = UnityEngine.Random.insideUnitSphere * 40;
             go.transform.parent = rootGo.transform;

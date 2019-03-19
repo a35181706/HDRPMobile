@@ -11,7 +11,7 @@ public class JobGravitySystem : JobComponentSystem
 {
 
     [BurstCompile]
-    struct GravityJob : IJobProcessComponentData<GravityComponentData, Position>
+    struct GravityJob : IJobProcessComponentData<GravityComponentData, Translation>
     {
         //运行在其它线程中，需要拷贝一份GravityJobSystem的数据
         public float G;
@@ -22,7 +22,7 @@ public class JobGravitySystem : JobComponentSystem
         public float deltaTime;
 
 
-        public void Execute(ref GravityComponentData gravityData, ref Position position)
+        public void Execute(ref GravityComponentData gravityData, ref Translation position)
         {
             if (gravityData.delay > 0)
             {
@@ -41,7 +41,7 @@ public class JobGravitySystem : JobComponentSystem
 
                 }
 
-                position = new Position() { Value = pos };
+                position = new Translation() { Value = pos };
             }
         }
     }

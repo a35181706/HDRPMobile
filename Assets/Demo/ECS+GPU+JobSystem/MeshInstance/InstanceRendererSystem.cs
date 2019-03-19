@@ -38,10 +38,10 @@ public class InstanceRendererSystem : ComponentSystem
         }
     }
 
-	protected override void OnCreateManager(int capacity)
+	protected override void OnCreateManager()
 	{
 
-        m_InstanceRendererGroup = GetComponentGroup(typeof(InstanceRenderer), typeof(TransformMatrix), ComponentType.Subtractive<FurstumCulledComponent>());
+        m_InstanceRendererGroup = GetComponentGroup(typeof(InstanceRenderer), typeof(TransformMatrix), ComponentType.Exclude<FurstumCulledComponent>());
 	}
 
 	protected override void OnUpdate()

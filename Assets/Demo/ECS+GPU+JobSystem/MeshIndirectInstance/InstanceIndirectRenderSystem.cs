@@ -5,7 +5,7 @@ using Unity.Entities;
 using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Transforms;
-using Unity.Rendering;
+
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine.Assertions;
 using UnityEngine.Experimental.PlayerLoop;
@@ -48,11 +48,12 @@ public class InstanceIndirectRenderSystem : ComponentSystem
         }
     }
 
-    protected override void OnCreateManager(int capacity)
+    protected override void OnCreateManager()
     {
         m_InstanceRendererGroup = GetComponentGroup(typeof(InstanceIndirectRenderer),
-                                            typeof(TransformMatrix),
-                                            ComponentType.Subtractive<FurstumCulledComponent>());    
+                                            typeof(Translation),
+                                            typeof(Rotation),
+                                            ComponentType.Exclude<FurstumCulledComponent>());    
     }
     UnityEngine.Rendering.CommandBuffer cmdBuffer;
     void InitBuffers()
