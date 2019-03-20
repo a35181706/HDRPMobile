@@ -138,6 +138,7 @@ public class FrustumCullingSystem : JobComponentSystem
                             var temp = spheres[i * 4 + j];
                             temp.CullStatus = cullStatus[i][j];
                             spheres[i * 4 + j] = temp;
+                            commandBuffer.SetComponent(entities[i * 4 + j], temp);
                             if (cullStatus[i][j] == 0.0f)
                                 commandBuffer.RemoveComponent<FurstumCulledComponent>(entities[i*4 + j]);
                             else
@@ -156,6 +157,7 @@ public class FrustumCullingSystem : JobComponentSystem
                         var temp = spheres[baseIndex * 4 + i];
                         temp.CullStatus = cullStatus[baseIndex][i];
                         spheres[baseIndex * 4 + i] = temp;
+                        commandBuffer.SetComponent(entities[baseIndex * 4 + i], temp);
                         if (cullStatus[baseIndex][i] == 0.0f)
                             commandBuffer.RemoveComponent<FurstumCulledComponent>(entities[baseIndex*4 + i]);
                         else

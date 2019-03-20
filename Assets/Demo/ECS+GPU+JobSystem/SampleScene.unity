@@ -357,7 +357,12 @@ MonoBehaviour:
   - {fileID: 2000286364655073129, guid: 3cdf1fa52be8b8445869bc4ee09d6951, type: 3}
   - {fileID: 2000286364655073129, guid: 40f925a8dac0ee84eb07145068c7ee38, type: 3}
   earchSwordCout: 5000
-  mesh: {fileID: 4300000, guid: 7a154d6d51098b042b0d9a91e8a20e65, type: 2}
+  meshArry:
+  - {fileID: 4300000, guid: 7a154d6d51098b042b0d9a91e8a20e65, type: 2}
+  - {fileID: 4300000, guid: 7a154d6d51098b042b0d9a91e8a20e65, type: 2}
+  MatArry:
+  - {fileID: 2100000, guid: 868da5acd6f3ff045807635d8d8f6245, type: 2}
+  - {fileID: 2100000, guid: 38d8ea8f015efbe458b2b892bb6b221d, type: 2}
 --- !u!4 &639696838
 Transform:
   m_ObjectHideFlags: 0

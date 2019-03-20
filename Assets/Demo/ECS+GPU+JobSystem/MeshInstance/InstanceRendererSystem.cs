@@ -44,52 +44,41 @@ public class InstanceRendererSystem : ComponentSystem
 
 	protected override void OnCreateManager()
 	{
-
         m_InstanceRendererGroup = GetComponentGroup(ComponentType.ReadOnly<InstanceRenderer>(),
             ComponentType.ReadOnly<LocalToWorld>(),
             ComponentType.Exclude<FurstumCulledComponent>());
-
-        
-
     }
 
 	protected override void OnUpdate()
 	{
-        
-  //      EntityManager.GetAllUniqueSharedComponentData(m_CacheduniqueRendererTypes);
+        EntityManager.GetAllUniqueSharedComponentData(m_CacheduniqueRendererTypes);
 
-  //      for (int i = 0;i != m_CacheduniqueRendererTypes.Count;i++)
-  //      {
-  //          var renderer = m_CacheduniqueRendererTypes[i];
+        for (int i = 0; i != m_CacheduniqueRendererTypes.Count; i++)
+        {
+            var renderer = m_CacheduniqueRendererTypes[i];
+           
+            if (renderer.mesh && renderer.material)
+            {
+                m_InstanceRendererGroup.ResetFilter();
+                m_InstanceRendererGroup.SetFilter(renderer);
+                var transforms = m_InstanceRendererGroup.ToComponentDataArray<LocalToWorld>(Unity.Collections.Allocator.TempJob);
 
-  //          m_InstanceRendererGroup.SetFilter(new InstanceRenderer() {
-  //              mesh = renderer.mesh,
-  //              subMesh = renderer.subMesh,
-  //              material = renderer.material,
-  //              castShadows = renderer.castShadows,
-  //              receiveShadows = renderer.receiveShadows
-  //              });
-  //          if (renderer.mesh && renderer.material)
-  //          {
-                
-  //              var transforms = m_InstanceRendererGroup.ToComponentDataArray<LocalToWorld>( Unity.Collections.Allocator.Temp );
-              
-  //              int beginIndex = 0;
-  //              while (beginIndex < transforms.Length)
-  //              {
-  //                  int length = math.min(m_MatricesArray.Length, transforms.Length - beginIndex);
-  //                  CopyMatrices(transforms, beginIndex, length, m_MatricesArray);
-  //                  Graphics.DrawMeshInstanced(renderer.mesh, renderer.subMesh,
-  //                      renderer.material, m_MatricesArray, length, null,
-  //                      renderer.castShadows, renderer.receiveShadows);
-  //                  beginIndex += length;
-  //              }
-  //              transforms.Dispose();
-  //          }
-          
-  //      }
+                int beginIndex = 0;
+                while (beginIndex < transforms.Length)
+                {
+                    int length = math.min(m_MatricesArray.Length, transforms.Length - beginIndex);
+                    CopyMatrices(transforms, beginIndex, length, m_MatricesArray);
+                    Graphics.DrawMeshInstanced(renderer.mesh, renderer.subMesh,
+                        renderer.material, m_MatricesArray, length, null,
+                        renderer.castShadows, renderer.receiveShadows);
+                    beginIndex += length;
+                }
+                transforms.Dispose();
+            }
 
-		//m_CacheduniqueRendererTypes.Clear();
+        }
 
-	}
+        m_CacheduniqueRendererTypes.Clear();
+
+    }
 }
