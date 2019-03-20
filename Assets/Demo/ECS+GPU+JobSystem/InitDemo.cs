@@ -30,7 +30,7 @@ public class InitDemo : MonoBehaviour
         {
             var entities = new NativeArray<Entity>(earchSwordCout, Allocator.Temp);
 
-
+            
             entityMgr.Instantiate(obj, entities);
 
             for (int i = 0; i < entities.Length; ++i)

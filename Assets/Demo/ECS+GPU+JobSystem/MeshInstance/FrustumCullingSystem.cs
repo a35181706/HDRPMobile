@@ -7,17 +7,19 @@ using Unity.Transforms;
 using UnityEditor;
 using UnityEngine;
 
-[UnityEngine.ExecuteInEditMode]
+
 [UpdateAfter(typeof(FrustumCullingSystem))]
 public class FrustumCullingBarrier : EntityCommandBufferSystem
 {
+  
+    
 }
 
-[UnityEngine.ExecuteInEditMode]
+
 public class FrustumCullingSystem : JobComponentSystem
 {
 
-    [BurstCompile]
+
     struct TransformCenterJob : IJobParallelForBatch
     {
         [NativeDisableParallelForRestriction]
@@ -27,8 +29,9 @@ public class FrustumCullingSystem : JobComponentSystem
 
         [ReadOnly]
         public NativeArray<FurstumCullingComponent> sphere;
-        [ReadOnly]
-        public NativeArray<TransformMatrix> transform;
+
+        [DeallocateOnJobCompletion][ReadOnly]
+        public NativeArray<LocalToWorld> transform;
 
         public void Execute(int start, int count)
         {
@@ -75,15 +78,18 @@ public class FrustumCullingSystem : JobComponentSystem
         public float4 bottomZ;
         public float4 bottomDist;
     }
-    [BurstCompile]
+
+
     struct FrustumCullJob : IJobParallelFor
     {
         [DeallocateOnJobCompletion][ReadOnly] public NativeArray<float4> center;
+
         public NativeArray<float4> culled;
 
         [DeallocateOnJobCompletion][ReadOnly] public NativeArray<FrustumPlanes> planes;
         public void Execute(int i)
         {
+            
             var x = center[i * 4];
             var y = center[i * 4 + 1];
             var z = center[i * 4 + 2];
@@ -112,15 +118,17 @@ public class FrustumCullingSystem : JobComponentSystem
     struct CullStatusUpdatejob : IJob
     {
         public EntityCommandBuffer commandBuffer;
-        [ReadOnly] public NativeArray<Entity> entities;
-        public NativeArray<FurstumCullingComponent> spheres;
+        [DeallocateOnJobCompletion][ReadOnly] public NativeArray<Entity> entities;
+        [DeallocateOnJobCompletion] public NativeArray<FurstumCullingComponent> spheres;
         [DeallocateOnJobCompletion][ReadOnly] public NativeArray<float4> cullStatus;
         [DeallocateOnJobCompletion][ReadOnly] public NativeArray<float4> oldCullStatus;
         public void Execute()
         {
+            
             // Check for meshes which changed culling status, 4 at a time
             for (int i = 0; i < spheres.Length / 4; ++i)
             {
+                
                 if (math.any(oldCullStatus[i] != cullStatus[i]))
                 {
                     for (int j = 0; j < 4; ++j)
@@ -193,13 +201,15 @@ public class FrustumCullingSystem : JobComponentSystem
 
     ComponentGroup boudingSpheres;
 
+    [Inject] FrustumCullingBarrier bannair;
+
     private Plane[] cameraPlanes;
     protected override void OnCreateManager()
     {
         cameraPlanes = new Plane[6];
 
-        boudingSpheres = GetComponentGroup(typeof(FurstumCullingComponent),typeof(TransformMatrix));
-        
+        boudingSpheres = GetComponentGroup(typeof(FurstumCullingComponent),typeof(LocalToWorld));
+
     }
 
 
@@ -237,8 +247,9 @@ public class FrustumCullingSystem : JobComponentSystem
             output = centers,
             oldCullStatus = oldCullStatus,
             sphere = cullSpehre,
-            transform = boudingSpheres.ToComponentDataArray<TransformMatrix>(Allocator.TempJob),
+            transform = boudingSpheres.ToComponentDataArray<LocalToWorld>(Allocator.TempJob),
         };
+
         var cullJob = new FrustumCullJob
         {
             center = centers, culled = cullStatus,
@@ -250,7 +261,7 @@ public class FrustumCullingSystem : JobComponentSystem
         // Check four meshes at a time agains the plains, possible since we changed how positions are stored in the previous job
         var cullHandle = cullJob.Schedule((Length + 3) / 4, 1, trans);
 
-        var bannair = new FrustumCullingBarrier();
+        //var bannair = new FrustumCullingBarrier();
         var cullStatusUpdateJob = new CullStatusUpdatejob
         {
             commandBuffer = bannair.CreateCommandBuffer(),
