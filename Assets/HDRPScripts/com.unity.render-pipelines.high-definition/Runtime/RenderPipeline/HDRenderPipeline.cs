@@ -236,7 +236,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         }
 
         public HDRenderPipeline(HDRenderPipelineAsset asset)
-        { 
+        {
             m_Asset = asset;
             HDProbeSystem.Parameters = asset.reflectionSystemParameters;
 
@@ -1404,13 +1404,6 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         }
 
                         renderContext.ExecuteCommandBuffer(cmd);
-
-                        CommandBuffer[] allFinalBufer = renderRequest.hdCamera.camera.GetCommandBuffers(CameraEvent.AfterFinalPass);
-
-                        foreach (CommandBuffer finalBuffer in allFinalBufer)
-                        {
-                            renderContext.ExecuteCommandBuffer(finalBuffer);
-                        }
 
                         CommandBufferPool.Release(cmd);
                         renderContext.Submit();

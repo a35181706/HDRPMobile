@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
+using System.IO;
 
 public class HDRPTools
 {
@@ -62,6 +63,10 @@ public class HDRPTools
 
             string newPath = CommonUtil.CombinePath(newCsFileFolder,excFolderPath);
 
+
+            CommonUtil.RemoveFileReadOnlyAttribute(newPath);
+            CommonUtil.RemoveFileReadOnlyAttribute(newPath + ".meta");
+
             CommonUtil.MoveFileHelper(csFile, newPath);
             CommonUtil.MoveFileHelper(csFile + ".meta", newPath + ".meta");
         }
@@ -77,6 +82,9 @@ public class HDRPTools
 
             string newPath = CommonUtil.CombinePath(newCsFileFolder, excFolderPath);
 
+            CommonUtil.RemoveFileReadOnlyAttribute(newPath);
+            CommonUtil.RemoveFileReadOnlyAttribute(newPath + ".meta");
+
             CommonUtil.MoveFileHelper(asmdefFile, newPath);
             CommonUtil.MoveFileHelper(asmdefFile + ".meta", newPath + ".meta");
         }
@@ -84,6 +92,8 @@ public class HDRPTools
         AssetDatabase.Refresh();
 
     }
+
+    
 
     public static void DeleteHDRPScriptsFolder(string FolderKey)
     {
@@ -109,7 +119,10 @@ public class HDRPTools
 
         foreach (string csFile in allCsFile)
         {
+
+            CommonUtil.RemoveFileReadOnlyAttribute(csFile);
             CommonUtil.DeleteFileHelper(csFile);
+            CommonUtil.RemoveFileReadOnlyAttribute(csFile + ".meta");
             CommonUtil.DeleteFileHelper(csFile + ".meta");
         }
 
@@ -119,6 +132,9 @@ public class HDRPTools
 
         foreach (string asmdefFile in allAsmDefFile)
         {
+            CommonUtil.RemoveFileReadOnlyAttribute(asmdefFile);
+            CommonUtil.RemoveFileReadOnlyAttribute(asmdefFile + ".meta");
+
             CommonUtil.DeleteFileHelper(asmdefFile);
             CommonUtil.DeleteFileHelper(asmdefFile + ".meta");
         }

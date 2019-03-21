@@ -41,6 +41,16 @@ public class CommonUtil
         File.Move(SrcPath, DestPath);
     }
 
+    public static void RemoveFileReadOnlyAttribute(string SrcPath)
+    {
+        if (!File.Exists(SrcPath))
+        {
+            return;
+        }
+        FileInfo fInfo = new FileInfo(SrcPath);
+        fInfo.IsReadOnly = false;
+    }
+
     public static void CopyFileHelper(string SrcPath, string DestPath)
     {
         if (!File.Exists(SrcPath))
