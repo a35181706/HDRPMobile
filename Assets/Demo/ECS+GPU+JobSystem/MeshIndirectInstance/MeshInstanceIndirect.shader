@@ -6,7 +6,8 @@
 	}
 	SubShader
 	{
-
+		Tags { "RenderType" = "HDUnlitShader" "RenderPipeline" = "HDRenderPipeline"  }
+		LOD 100
 		Pass 
 		{
 

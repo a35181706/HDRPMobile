@@ -42,8 +42,6 @@ public class ComputeShaderDemo : MonoBehaviour
     private int gpuUpdateKernelIndex = 0;
     private GPUParticle[] cpuParticleBuffer = null;
 
-    private UnityEngine.Rendering.CommandBuffer gpuParticleRenderCommand = null;
-
     private int currentParticleCout = -1;
 
     /// <summary>
@@ -51,10 +49,33 @@ public class ComputeShaderDemo : MonoBehaviour
     /// </summary>
     private int gpuThreadGroupNum = -1;
 
+    List<HDAdditionalCameraData> allAdditionCamera = new List<HDAdditionalCameraData>(10);
+    CommandBuffer renderCommandBuffer = null;
+
     void Start()
     {
+        renderCommandBuffer = new CommandBuffer();
+        renderCommandBuffer.name = "ComputeShaderDemo";
+
+        foreach (Camera cam in Camera.allCameras)
+        {
+            //HDAdditionalCameraData additionCamera = cam.GetComponent<HDAdditionalCameraData>();
+
+            //if (additionCamera)
+            //{
+            //    additionCamera.customRender += AdditionCamera_customRender;
+            //    allAdditionCamera.Add(additionCamera);
+            //}
+            cam.AddCommandBuffer(CameraEvent.AfterFinalPass, renderCommandBuffer);
+        }
 
         InitGPUParticleSystem();
+    }
+
+    private void AdditionCamera_customRender(UnityEngine.Rendering.ScriptableRenderContext context, HDCamera camera)
+    {
+        //context.ExecuteCommandBufferAsync(new UnityEngine.Rendering.CommandBuffer(), UnityEngine.Rendering.ComputeQueueType.)
+        context.ExecuteCommandBuffer(renderCommandBuffer);
     }
 
     void InitGPUParticleSystem()
@@ -94,10 +115,8 @@ public class ComputeShaderDemo : MonoBehaviour
         //给shader设置buffer数据，用来做渲染用
         particleMat.SetBuffer(computeShaderGPUBufferName, gpuParticleBuffer);
 
-        gpuParticleRenderCommand = new UnityEngine.Rendering.CommandBuffer();
-        gpuParticleRenderCommand.name = "GPUParticle";
-        gpuParticleRenderCommand.DrawProcedural(transform.localToWorldMatrix, particleMat, 0, MeshTopology.Points, 1, currentParticleCout);
-        Camera.main.AddCommandBuffer(UnityEngine.Rendering.CameraEvent.AfterEverything, gpuParticleRenderCommand);
+        renderCommandBuffer.DrawProcedural(transform.localToWorldMatrix, particleMat, 0, MeshTopology.Points, 1, currentParticleCout);
+    
     }
 
     private void OnGUI()
@@ -130,7 +149,7 @@ public class ComputeShaderDemo : MonoBehaviour
     {
         if (gpuParticleBuffer != null)
         {
-            gpuParticleRenderCommand.Release();
+            renderCommandBuffer.Release();
             gpuParticleBuffer.Release();
             gpuParticleBuffer = null;
         }

@@ -19,7 +19,7 @@ public class FrustumCullingBarrier : EntityCommandBufferSystem
 public class FrustumCullingSystem : JobComponentSystem
 {
 
-
+    [BurstCompile]
     struct TransformCenterJob : IJobParallelForBatch
     {
         [NativeDisableParallelForRestriction]
@@ -80,6 +80,7 @@ public class FrustumCullingSystem : JobComponentSystem
     }
 
 
+    [BurstCompile]
     struct FrustumCullJob : IJobParallelFor
     {
         [DeallocateOnJobCompletion][ReadOnly] public NativeArray<float4> center;
