@@ -4,8 +4,7 @@ using Unity.Entities;
 using UnityEngine.Rendering;
 
 /// <summary>
-/// Render Mesh with Material (must be instanced material) by object to world matrix.
-/// Specified by TransformMatrix associated with Entity.
+/// 渲染Mesh，使用Indriect接口
 /// </summary>
 [Serializable]
 public struct InstanceIndirectRenderer : ISharedComponentData

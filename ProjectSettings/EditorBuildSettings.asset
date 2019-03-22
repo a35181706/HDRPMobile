@@ -4,5 +4,8 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Demo/ECS+GPU+JobSystem/SampleScene.unity
+    guid: 6f915f44da20827469e3afff75d72e4f
   m_configObjects: {}

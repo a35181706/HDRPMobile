@@ -7,15 +7,6 @@ using Unity.Transforms;
 using UnityEditor;
 using UnityEngine;
 
-
-[UpdateAfter(typeof(FrustumCullingSystem))]
-public class FrustumCullingBarrier : EntityCommandBufferSystem
-{
-  
-    
-}
-
-
 public class FrustumCullingSystem : JobComponentSystem
 {
 
@@ -204,7 +195,7 @@ public class FrustumCullingSystem : JobComponentSystem
 
     ComponentGroup boudingSpheres;
 
-    [Inject] FrustumCullingBarrier bannair;
+    EndSimulationEntityCommandBufferSystem bannair;
 
     private Plane[] cameraPlanes;
     protected override void OnCreateManager()
@@ -212,12 +203,13 @@ public class FrustumCullingSystem : JobComponentSystem
         cameraPlanes = new Plane[6];
 
         boudingSpheres = GetComponentGroup(typeof(FurstumCullingComponent),typeof(LocalToWorld));
-
+        bannair = World.GetExistingManager<EndSimulationEntityCommandBufferSystem>();
     }
 
 
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
+        
         int numCameras = Camera.allCamerasCount;
 #if UNITY_EDITOR
         if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -273,7 +265,9 @@ public class FrustumCullingSystem : JobComponentSystem
             cullStatus = cullStatus,
             oldCullStatus = oldCullStatus
         };
-            
+
+
+       
         return cullStatusUpdateJob.Schedule(cullHandle);
     }
 }

@@ -49,7 +49,6 @@ public class ComputeShaderDemo : MonoBehaviour
     /// </summary>
     private int gpuThreadGroupNum = -1;
 
-    List<HDAdditionalCameraData> allAdditionCamera = new List<HDAdditionalCameraData>(10);
     CommandBuffer renderCommandBuffer = null;
 
     void Start()
@@ -59,24 +58,12 @@ public class ComputeShaderDemo : MonoBehaviour
 
         foreach (Camera cam in Camera.allCameras)
         {
-            //HDAdditionalCameraData additionCamera = cam.GetComponent<HDAdditionalCameraData>();
-
-            //if (additionCamera)
-            //{
-            //    additionCamera.customRender += AdditionCamera_customRender;
-            //    allAdditionCamera.Add(additionCamera);
-            //}
-            cam.AddCommandBuffer(CameraEvent.AfterFinalPass, renderCommandBuffer);
+            cam.AddCommandBuffer(CameraEvent.AfterEverything, renderCommandBuffer);
         }
 
         InitGPUParticleSystem();
     }
 
-    private void AdditionCamera_customRender(UnityEngine.Rendering.ScriptableRenderContext context, HDCamera camera)
-    {
-        //context.ExecuteCommandBufferAsync(new UnityEngine.Rendering.CommandBuffer(), UnityEngine.Rendering.ComputeQueueType.)
-        context.ExecuteCommandBuffer(renderCommandBuffer);
-    }
 
     void InitGPUParticleSystem()
     {

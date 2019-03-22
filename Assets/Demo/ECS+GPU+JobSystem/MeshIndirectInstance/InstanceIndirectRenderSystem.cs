@@ -1,52 +1,47 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using System.Collections.Generic;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
-using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Transforms;
-
-using Unity.Collections.LowLevel.Unsafe;
+using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Experimental.PlayerLoop;
-
+using Unity.Collections;
+using UnityEngine.Experimental.Rendering.HDPipeline;
+using UnityEngine.Rendering;
 
 /// <summary>
-/// Renders all Entities containing both MeshInstanceRenderer & TransformMatrix components.
 /// 自己实现的基于DrawMeshInstanceIndirect渲染的ECS版本
 /// </summary>
-
-[UpdateAfter(typeof(FrustumCullingBarrier))]
+[UpdateAfter(typeof(FrustumCullingSystem))]
 public class InstanceIndirectRenderSystem : ComponentSystem
 {
-    List<InstanceIndirectRenderer> m_CacheduniqueRendererTypes = new List<InstanceIndirectRenderer>(10);
-    ComponentGroup m_InstanceRendererGroup;
+    private List<InstanceIndirectRenderer> m_CacheduniqueRendererTypes = new List<InstanceIndirectRenderer>(10);
+    private ComponentGroup m_InstanceRendererGroup;
 
-    private ComputeBuffer argsBuffer;
-    private ComputeBuffer []transformBuffers = null;
+    private ComputeBuffer m_IndirecttArgsBuffer;
+    private ComputeBuffer []m_TransformBuffers = null;
+    private CommandBuffer m_RenderCommandBuffer;
+
     //drawindrect是写死的5个，unity说的
-    private uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
-    Matrix4x4[] matrixBuffer;
-    bool bInit = false;
+    private uint[] m_IndirecttArgs = new uint[5] { 0, 0, 0, 0, 0 };
+    private Matrix4x4[] m_MatrixBuffer;
+    private bool bInit = false;
 
-    // This is the ugly bit, necessary until Graphics.DrawMeshInstanced supports NativeArrays pulling the data in from a job.
-    public unsafe static void CopyMatrices(ComponentDataArray<LocalToWorld> transforms, int beginIndex, int length, Matrix4x4[] outMatrices)
+    public unsafe static void CopyMatrices(NativeArray<LocalToWorld> transforms, int beginIndex, int length, Matrix4x4[] outMatrices)
     {
-        // @TODO: This is using unsafe code because the Unity DrawInstances API takes a Matrix4x4[] instead of NativeArray.
-        // We want to use the ComponentDataArray.CopyTo method
-        // because internally it uses memcpy to copy the data,
-        // if the nativeslice layout matches the layout of the component data. It's very fast...
         fixed (Matrix4x4* matricesPtr = outMatrices)
         {
             Assert.AreEqual(sizeof(Matrix4x4), sizeof(LocalToWorld));
+
             var matricesSlice = NativeSliceUnsafeUtility.ConvertExistingDataToNativeSlice<LocalToWorld>(matricesPtr, sizeof(Matrix4x4), length);
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             NativeSliceUnsafeUtility.SetAtomicSafetyHandle(ref matricesSlice, AtomicSafetyHandle.GetTempUnsafePtrSliceHandle());
 #endif
-            transforms.CopyTo(matricesSlice, beginIndex);
+
+            matricesSlice.CopyFrom(transforms.Slice(beginIndex, length));
         }
 
-        
     }
 
     protected override void OnCreateManager()
@@ -55,93 +50,93 @@ public class InstanceIndirectRenderSystem : ComponentSystem
             ComponentType.ReadOnly<LocalToWorld>(),
             ComponentType.Exclude<FurstumCulledComponent>());    
     }
-    UnityEngine.Rendering.CommandBuffer cmdBuffer;
-    void InitBuffers()
+
+    void InitRender()
     {
-        if (bInit || !InitDemo.m_instance)
+        if (bInit || Camera.allCamerasCount <= 0)
         {
             return;
         }
         bInit = true;
-        argsBuffer = new ComputeBuffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
+        m_IndirecttArgsBuffer = new ComputeBuffer(1, m_IndirecttArgs.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
         int size = System.Runtime.InteropServices.Marshal.SizeOf(typeof(Matrix4x4));
-        matrixBuffer = new Matrix4x4[InitDemo.m_instance.earchSwordCout];
-        transformBuffers = new ComputeBuffer[InitDemo.m_instance.swordPrefabs.Length];
+        m_MatrixBuffer = new Matrix4x4[InitDemo.m_instance.earchSwordCout];
+        m_TransformBuffers = new ComputeBuffer[InitDemo.m_instance.swordPrefabs.Length];
 
-        for (int i = 0;i < transformBuffers.Length;i++)
+        for (int i = 0;i < m_TransformBuffers.Length;i++)
         {
-            transformBuffers[i] = new ComputeBuffer(InitDemo.m_instance.earchSwordCout, size);
+            m_TransformBuffers[i] = new ComputeBuffer(InitDemo.m_instance.earchSwordCout, size);
         }
 
-        cmdBuffer = new UnityEngine.Rendering.CommandBuffer();
+        m_RenderCommandBuffer = new UnityEngine.Rendering.CommandBuffer();
 
-        if (Camera.main.actualRenderingPath == RenderingPath.Forward)
+        foreach (Camera cam in Camera.allCameras)
         {
-            Camera.main.AddCommandBuffer(UnityEngine.Rendering.CameraEvent.AfterForwardOpaque, cmdBuffer);
+            cam.AddCommandBuffer(CameraEvent.AfterForwardOpaque, m_RenderCommandBuffer);
         }
-        else if (Camera.main.actualRenderingPath == RenderingPath.DeferredShading)
-        {
-            Camera.main.AddCommandBuffer(UnityEngine.Rendering.CameraEvent.AfterGBuffer, cmdBuffer);
-        }
-
     }
 
 
 
     protected override void OnUpdate()
     {
-        //InitBuffers();
+        InitRender();
 
-        //EntityManager.GetAllUniqueSharedComponentData(m_CacheduniqueRendererTypes);
+        if (!bInit)
+        {
+            return;
+        }
 
-        //var forEachFilter = m_InstanceRendererGroup.CreateForEachFilter(m_CacheduniqueRendererTypes);
-        //cmdBuffer.Clear();
-        //for (int i = 0; i != m_CacheduniqueRendererTypes.Count; i++)
-        //{
-        //    var renderer = m_CacheduniqueRendererTypes[i];
+        EntityManager.GetAllUniqueSharedComponentData(m_CacheduniqueRendererTypes);
+        m_RenderCommandBuffer.Clear();
 
-        //    if (renderer.mesh && renderer.material)
-        //    {
-        //        var transforms = m_InstanceRendererGroup.GetComponentDataArray<LocalToWorld>(forEachFilter, i);
+        for (int i = 0; i != m_CacheduniqueRendererTypes.Count; i++)
+        {
+            var renderer = m_CacheduniqueRendererTypes[i];
 
-        //        CopyMatrices(transforms, 0, transforms.Length, matrixBuffer);
+            if (renderer.mesh && renderer.material)
+            {
+                m_InstanceRendererGroup.ResetFilter();
+                m_InstanceRendererGroup.SetFilter(renderer);
+                var transforms = m_InstanceRendererGroup.ToComponentDataArray<LocalToWorld>(Unity.Collections.Allocator.TempJob);
 
-        //        args[0] = (uint)renderer.mesh.GetIndexCount(renderer.subMesh);
-        //        args[1] = (uint)transforms.Length;
-        //        args[2] = (uint)renderer.mesh.GetIndexStart(renderer.subMesh);
-        //        args[3] = (uint)renderer.mesh.GetBaseVertex(renderer.subMesh);
 
-        //        transformBuffers[i-1].SetData(matrixBuffer);
-        //        argsBuffer.SetData(args);
-        //        renderer.material.SetBuffer("transformBuffer", transformBuffers[i - 1]);
+                CopyMatrices(transforms, 0, transforms.Length, m_MatrixBuffer);
 
-        //        //cmdBuffer.DrawMeshInstancedIndirect(renderer.mesh, renderer.subMesh, renderer.material,
-        //        //   -1, argsBuffer, 0, null);
+                m_IndirecttArgs[0] = (uint)renderer.mesh.GetIndexCount(renderer.subMesh);
+                m_IndirecttArgs[1] = (uint)transforms.Length;
+                m_IndirecttArgs[2] = (uint)renderer.mesh.GetIndexStart(renderer.subMesh);
+                m_IndirecttArgs[3] = (uint)renderer.mesh.GetBaseVertex(renderer.subMesh);
 
-        //        Graphics.DrawMeshInstancedIndirect(renderer.mesh, renderer.subMesh, renderer.material,
-        //            new Bounds(Vector3.zero, Vector3.one * 999), argsBuffer, 0, null, renderer.castShadows, renderer.receiveShadows);
-        //    }
-        //    else
-        //    {
-        //        args[0] = args[1] = args[2] = args[3] = 0;
-        //    }
-        //}
+                m_TransformBuffers[i - 1].SetData(m_MatrixBuffer);
+                m_IndirecttArgsBuffer.SetData(m_IndirecttArgs);
+                renderer.material.SetBuffer("transformBuffer", m_TransformBuffers[i - 1]);
 
-        //m_CacheduniqueRendererTypes.Clear();
-        //forEachFilter.Dispose();
+                m_RenderCommandBuffer.DrawMeshInstancedIndirect(renderer.mesh, renderer.subMesh, renderer.material,
+                   -1, m_IndirecttArgsBuffer, 0, null);
+
+                transforms.Dispose();
+            }
+            else
+            {
+                m_IndirecttArgs[0] = m_IndirecttArgs[1] = m_IndirecttArgs[2] = m_IndirecttArgs[3] = 0;
+            }
+        }
+
+        m_CacheduniqueRendererTypes.Clear();
     }
 
     protected override void OnDestroyManager()
     {
-        if (transformBuffers != null)
+        if (m_TransformBuffers != null)
         {
-            for (int i = 0; i < transformBuffers.Length; i++)
+            for (int i = 0; i < m_TransformBuffers.Length; i++)
             {
-                transformBuffers[i].Release();
+                m_TransformBuffers[i].Release();
             }
-            transformBuffers = null;
-            argsBuffer.Release();
-            argsBuffer = null;
+            m_TransformBuffers = null;
+            m_IndirecttArgsBuffer.Release();
+            m_IndirecttArgsBuffer = null;
         }
     }
 }

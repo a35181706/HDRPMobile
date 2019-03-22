@@ -6,33 +6,77 @@ using System.IO;
 
 public class HDRPTools
 {
-    [MenuItem("Tools/HDRP/SynsHDRPScriptsToProject")]
-    public static void SynsHDRPScriptsToProject()
+    public static string ProjectCustomHDRPFloderName = "HDRP";
+    public static string cacheCustomHDRPFloderName = "HDRPCache";
+    public static string RPCoreFloderName = "com.unity.render-pipelines.core";
+    public static string HDRPFloderName = "com.unity.render-pipelines.high-definition";
+    public static string ShaderGraphFloderName = "com.unity.shadergraph";
+
+
+    [MenuItem("Tools/HDRP/SynsHDRPToProject")]
+    public static void SynsHDRPToProject()
     {
-        SyncHDRPScriptsFolder(Application.dataPath,"com.unity.render-pipelines.core");
-        SyncHDRPScriptsFolder(Application.dataPath, "com.unity.render-pipelines.high-definition");
-        SyncHDRPScriptsFolder(Application.dataPath, "com.unity.shadergraph");
+        SyncHDRPFolder(Application.dataPath, RPCoreFloderName);
+        SyncHDRPFolder(Application.dataPath, HDRPFloderName);
+        SyncHDRPFolder(Application.dataPath, ShaderGraphFloderName);
+
+        ReplaceHDRPFolder(CommonUtil.CombinePath(Application.dataPath, ProjectCustomHDRPFloderName),
+                            new string[] { RPCoreFloderName,
+                                               HDRPFloderName,
+                                                    ShaderGraphFloderName});
+
+        AssetDatabase.Refresh();
     }
 
-    [MenuItem("Tools/HDRP/SynsHDRPScriptsToExternalCache")]
-    public static void SynsHDRPScriptsToExternalCache()
+    [MenuItem("Tools/HDRP/SynsHDRPToExternalCache")]
+    public static void SynsHDRPToExternalCache()
     {
-        string cacheFolder = Application.dataPath.Replace("Assets","HDRPCacheFolder");
+        string cacheFolder = Application.dataPath.Replace("Assets", cacheCustomHDRPFloderName);
 
-        SyncHDRPScriptsFolder(cacheFolder, "com.unity.render-pipelines.core");
-        SyncHDRPScriptsFolder(cacheFolder, "com.unity.render-pipelines.high-definition");
-        SyncHDRPScriptsFolder(cacheFolder, "com.unity.shadergraph");
+        SyncHDRPFolder(cacheFolder, RPCoreFloderName);
+        SyncHDRPFolder(cacheFolder, HDRPFloderName);
+        SyncHDRPFolder(cacheFolder, ShaderGraphFloderName);
+
+        ReplaceHDRPFolder(CommonUtil.CombinePath(cacheFolder, ProjectCustomHDRPFloderName),
+                            new string[] { RPCoreFloderName,
+                                               HDRPFloderName,
+                                                    ShaderGraphFloderName});
+        AssetDatabase.Refresh();
     }
 
-    [MenuItem("Tools/HDRP/ClearHDRPLibraryCacheScripts")]
-    public static void ClearHDRPLibraryCacheScripts()
+    [MenuItem("Tools/HDRP/ClearHDRPLibraryCache")]
+    public static void ClearHDRPLibraryCache()
     {
-        DeleteHDRPScriptsFolder( "com.unity.render-pipelines.core");
-        DeleteHDRPScriptsFolder( "com.unity.render-pipelines.high-definition");
-        DeleteHDRPScriptsFolder( "com.unity.shadergraph");
+        DeleteHDRPLibraryCacheFolder(RPCoreFloderName);
+        DeleteHDRPLibraryCacheFolder(HDRPFloderName);
+        DeleteHDRPLibraryCacheFolder(ShaderGraphFloderName);
+        AssetDatabase.Refresh();
     }
 
-    public static void SyncHDRPScriptsFolder(string outPutFolder,string FolderKey)
+    public static void ReplaceHDRPFolder(string folder,string []FolderKeyArry)
+    {
+        string[] allFile = System.IO.Directory.GetFiles(folder, "*.*", System.IO.SearchOption.AllDirectories);
+
+        foreach (string csFile in allFile)
+        {
+            if (IsReplaceFile(csFile))
+            {
+                string allContext = File.ReadAllText(csFile);
+
+                foreach (string FolderKey in FolderKeyArry)
+                {
+                    string oldIncludeHeader = "Packages/" + FolderKey;
+                    string newIncludeHeader = "Assets/" + ProjectCustomHDRPFloderName + "/" + FolderKey;
+
+                    allContext = allContext.Replace(oldIncludeHeader, newIncludeHeader);
+                }
+ 
+                File.WriteAllText(csFile, allContext);
+            }
+        }
+    }
+
+    public static void SyncHDRPFolder(string outPutFolder,string FolderKey)
     {
         string PackageRootPath = Application.dataPath;
 
@@ -51,51 +95,46 @@ public class HDRPTools
         }
 
         //拷贝CS文件
-        string []allCsFile = System.IO.Directory.GetFiles(hdrpFolder, "*.cs", System.IO.SearchOption.AllDirectories);
+        string []allFile = System.IO.Directory.GetFiles(hdrpFolder, "*.*", System.IO.SearchOption.AllDirectories);
 
-        string newCsFileFolder = CommonUtil.CombinePath(outPutFolder, "HDRPScripts/" + FolderKey);
+        string newCsFileFolder = CommonUtil.CombinePath(outPutFolder, ProjectCustomHDRPFloderName + "/" + FolderKey);
         CommonUtil.DeleteDirectory(newCsFileFolder);
 
-        foreach (string csFile in allCsFile)
+        foreach (string csFile in allFile)
         {
+            if (csFile.EndsWith(".meta"))
+            {
+                continue;
+            }
             string excFolderPath = csFile.Replace("\\","/");
             excFolderPath = excFolderPath.Replace(hdrpFolder,string.Empty);
 
             string newPath = CommonUtil.CombinePath(newCsFileFolder,excFolderPath);
 
-
-            CommonUtil.RemoveFileReadOnlyAttribute(newPath);
-            CommonUtil.RemoveFileReadOnlyAttribute(newPath + ".meta");
-
             CommonUtil.MoveFileHelper(csFile, newPath);
-            CommonUtil.MoveFileHelper(csFile + ".meta", newPath + ".meta");
-        }
-
-        //拷贝.asmdef文件
-
-        string[] allAsmDefFile = System.IO.Directory.GetFiles(hdrpFolder, "*.asmdef", System.IO.SearchOption.AllDirectories);
-
-        foreach (string asmdefFile in allAsmDefFile)
-        {
-            string excFolderPath = asmdefFile.Replace("\\", "/");
-            excFolderPath = excFolderPath.Replace(hdrpFolder, string.Empty);
-
-            string newPath = CommonUtil.CombinePath(newCsFileFolder, excFolderPath);
-
             CommonUtil.RemoveFileReadOnlyAttribute(newPath);
+
+            CommonUtil.MoveFileHelper(csFile + ".meta", newPath + ".meta");
             CommonUtil.RemoveFileReadOnlyAttribute(newPath + ".meta");
-
-            CommonUtil.MoveFileHelper(asmdefFile, newPath);
-            CommonUtil.MoveFileHelper(asmdefFile + ".meta", newPath + ".meta");
         }
-
-        AssetDatabase.Refresh();
-
     }
 
+    public static bool IsReplaceFile(string file)
+    {
+        string[] shaderfile = new string[] {".hlsl",".compute",".shader", ".cginc",".cs", ".raytrace", ".template" };
+        foreach (string str in shaderfile)
+        {
+            if (file.EndsWith(str))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
     
 
-    public static void DeleteHDRPScriptsFolder(string FolderKey)
+    public static void DeleteHDRPLibraryCacheFolder(string FolderKey)
     {
         string PackageRootPath = Application.dataPath;
 
@@ -115,31 +154,22 @@ public class HDRPTools
         }
 
         //拷贝CS文件
-        string[] allCsFile = System.IO.Directory.GetFiles(hdrpFolder, "*.cs", System.IO.SearchOption.AllDirectories);
+        string[] allCsFile = System.IO.Directory.GetFiles(hdrpFolder, "*.*", System.IO.SearchOption.AllDirectories);
 
         foreach (string csFile in allCsFile)
         {
+            if (csFile.EndsWith(".meta"))
+            {
+                continue;
+            }
 
             CommonUtil.RemoveFileReadOnlyAttribute(csFile);
             CommonUtil.DeleteFileHelper(csFile);
+
             CommonUtil.RemoveFileReadOnlyAttribute(csFile + ".meta");
             CommonUtil.DeleteFileHelper(csFile + ".meta");
         }
 
-        //拷贝.asmdef文件
-
-        string[] allAsmDefFile = System.IO.Directory.GetFiles(hdrpFolder, "*.asmdef", System.IO.SearchOption.AllDirectories);
-
-        foreach (string asmdefFile in allAsmDefFile)
-        {
-            CommonUtil.RemoveFileReadOnlyAttribute(asmdefFile);
-            CommonUtil.RemoveFileReadOnlyAttribute(asmdefFile + ".meta");
-
-            CommonUtil.DeleteFileHelper(asmdefFile);
-            CommonUtil.DeleteFileHelper(asmdefFile + ".meta");
-        }
-
-        AssetDatabase.Refresh();
 
     }
 }
