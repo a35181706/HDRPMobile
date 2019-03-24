@@ -502,7 +502,8 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                     buildTarget == UnityEditor.BuildTarget.WSAPlayer ||
                     buildTarget == UnityEditor.BuildTarget.XboxOne ||
                     buildTarget == UnityEditor.BuildTarget.PS4 ||
-                    buildTarget == UnityEditor.BuildTarget.Switch);
+                    buildTarget == UnityEditor.BuildTarget.Switch ||
+                    buildTarget == UnityEditor.BuildTarget.Android);
         }
 
         public static bool AreGraphicsAPIsSupported(UnityEditor.BuildTarget target, out GraphicsDeviceType unsupportedGraphicDevice)

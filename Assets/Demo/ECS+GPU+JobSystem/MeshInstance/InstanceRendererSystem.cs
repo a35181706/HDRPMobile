@@ -100,7 +100,7 @@ public class InstanceRendererSystem : ComponentSystem
                 {
                     int length = math.min(m_MatricesArray.Length, transforms.Length - beginIndex);
                     CopyMatrices(transforms, beginIndex, length, m_MatricesArray);
-
+                    //Graphics.DrawMeshInstanced(renderer.mesh, renderer.subMesh, renderer.material, m_MatricesArray, length, null);
                     m_RenderCommandBuffer.DrawMeshInstanced(renderer.mesh, renderer.subMesh, renderer.material, -1, m_MatricesArray, length, null);
                     beginIndex += length;
                 }

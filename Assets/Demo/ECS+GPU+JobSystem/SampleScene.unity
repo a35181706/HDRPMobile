@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.54280037, g: 0.5145337, b: 0.6241504, a: 1}
+  m_IndirectSpecularColor: {r: 0.54276127, g: 0.5143367, b: 0.6239151, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -645,9 +645,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   swordPrefabs:
-  - {fileID: 2000286364655073129, guid: 3cdf1fa52be8b8445869bc4ee09d6951, type: 3}
-  - {fileID: 2000286364655073129, guid: 40f925a8dac0ee84eb07145068c7ee38, type: 3}
-  earchSwordCout: 5000
+  - {fileID: 2000286364655073129, guid: a9dcda144e54e74478e98f66a27cb0fd, type: 3}
+  - {fileID: 2000286364655073129, guid: 25ba29f0fa86ea04d9a4d3df2a852618, type: 3}
+  earchSwordCout: 1000
   mesh: {fileID: 4300000, guid: 7a154d6d51098b042b0d9a91e8a20e65, type: 2}
 --- !u!4 &639696838
 Transform:

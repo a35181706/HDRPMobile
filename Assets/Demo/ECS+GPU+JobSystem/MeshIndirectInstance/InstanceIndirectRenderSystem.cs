@@ -112,6 +112,9 @@ public class InstanceIndirectRenderSystem : ComponentSystem
                 m_IndirecttArgsBuffer.SetData(m_IndirecttArgs);
                 renderer.material.SetBuffer("transformBuffer", m_TransformBuffers[i - 1]);
 
+
+                //Graphics.DrawMeshInstancedIndirect(renderer.mesh, renderer.subMesh, renderer.material, new Bounds(Vector3.zero, Vector3.one), m_IndirecttArgsBuffer, 0, null);
+
                 m_RenderCommandBuffer.DrawMeshInstancedIndirect(renderer.mesh, renderer.subMesh, renderer.material,
                    -1, m_IndirecttArgsBuffer, 0, null);
 

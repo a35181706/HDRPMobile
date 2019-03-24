@@ -130,6 +130,8 @@ public class ComputeShaderDemo : MonoBehaviour
 
         //执行一次compute shader 里的函数
         particleComputeShader.Dispatch(gpuUpdateKernelIndex, gpuThreadGroupNum, 1, 1);
+
+       // Graphics.DrawProcedural(particleMat, new Bounds(Vector3.zero, Vector3.one), MeshTopology.Points, 1, currentParticleCout);
     }
 
     private void OnDestroy()
