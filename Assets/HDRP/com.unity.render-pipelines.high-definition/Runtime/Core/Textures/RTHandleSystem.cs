@@ -297,6 +297,12 @@ namespace UnityEngine.Experimental.Rendering
                 bindTextureMS = false;
             }
 
+            if (colorFormat == GraphicsFormat.R16G16_SFloat)
+            {
+                
+                colorFormat = GraphicsFormat.R32G32_SFloat;
+            }
+
             // XR override for instancing support
             VRTextureUsage vrUsage = TextureXR.OverrideRenderTexture(xrInstancing, ref dimension, ref slices);
 
@@ -349,8 +355,30 @@ namespace UnityEngine.Experimental.Rendering
                     name = CoreUtils.GetRenderTargetAutoName(width, height, slices, GraphicsFormatUtility.GetRenderTextureFormat(colorFormat), name, mips: useMipMap, enableMSAA: enableMSAA, msaaSamples: msaaSamples)
                 };
             }
-
             rt.Create();
+            //if (enableRandomWrite)
+            //{
+            //    if (rt.Create())
+            //    {
+            //        Debug.LogError("Alloc-支持的RT格式randomWrite:" + colorFormat + ",w=" + width + ",h=" + height + ",dimension:" + dimension);
+            //    }
+            //    else
+            //    {
+            //        Debug.LogError("Alloc-不支持的RT格式randomWrite:" + colorFormat + ",w=" + width + ",h=" + height + ",dimension:" + dimension);
+            //    }
+
+            //}
+            //else
+            //{
+            //    if (rt.Create())
+            //    {
+            //        Debug.LogError("Alloc-支持的RT格式:" + colorFormat + ",w=" + width + ",h=" + height + ",dimension:" + dimension);
+            //    }
+            //    else
+            //    {
+            //        Debug.LogError("Alloc-不支持的RT格式:" + colorFormat + ",w=" + width + ",h=" + height + ",dimension:" + dimension);
+            //    }
+            //}
 
             RTCategory category = enableMSAA ? RTCategory.MSAA : RTCategory.Regular;
             var newRT = new RTHandle(this);
@@ -537,6 +565,18 @@ namespace UnityEngine.Experimental.Rendering
                 UAV = false;
             }
 
+            if (colorFormat == GraphicsFormat.R8_UNorm)
+            {
+
+                colorFormat = GraphicsFormat.R32_SFloat;
+            }
+
+            if (colorFormat == GraphicsFormat.R16_SFloat)
+            {
+
+                colorFormat = GraphicsFormat.R32_SFloat;
+            }
+
             int msaaSamples = allocForMSAA ? (int)m_ScaledRTCurrentMSAASamples : 1;
             RTCategory category = allocForMSAA ? RTCategory.MSAA : RTCategory.Regular;
 
@@ -590,8 +630,30 @@ namespace UnityEngine.Experimental.Rendering
                     name = CoreUtils.GetRenderTargetAutoName(width, height, slices, GraphicsFormatUtility.GetRenderTextureFormat(colorFormat), name, mips: useMipMap, enableMSAA: allocForMSAA, msaaSamples: m_ScaledRTCurrentMSAASamples)
                 };
             }
-
             rt.Create();
+            //if (enableRandomWrite)
+            //{
+            //    if (rt.Create())
+            //    {
+            //        Debug.LogError("AllocAutoSizedRenderTexture-支持的RT格式randomWrite:" + colorFormat + ",w=" + width + ",h=" + height + ",dimension:" + dimension);
+            //    }
+            //    else
+            //    {
+            //        Debug.LogError("AllocAutoSizedRenderTexture-不支持的RT格式randomWrite:" + colorFormat + ",w=" + width + ",h=" + height + ",dimension:" + dimension);
+            //    }
+
+            //}
+            //else
+            //{
+            //    if (rt.Create())
+            //    {
+            //        Debug.LogError("AllocAutoSizedRenderTexture-支持的RT格式:" + colorFormat + ",w=" + width + ",h=" + height + ",dimension:" + dimension);
+            //    }
+            //    else
+            //    {
+            //        Debug.LogError("AllocAutoSizedRenderTexture-不支持的RT格式:" + colorFormat + ",w=" + width + ",h=" + height + ",dimension:" + dimension);
+            //    }
+            //}
 
             var rth = new RTHandle(this);
             rth.SetRenderTexture(rt, category);

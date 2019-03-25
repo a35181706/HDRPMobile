@@ -54,6 +54,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             Assert.IsTrue(len > 0);
 
             destination = new Texture2D[len];
+            Debug.LogError("BlueNoise -- num:" + size + ",w=" + size + ",h=" + size + ",format=" + format);
             destinationArray = new Texture2DArray(size, size, len, format, false, true);
             destinationArray.hideFlags = HideFlags.HideAndDontSave;
 

@@ -17,8 +17,10 @@ float SampleShadow_PCF_Tent_3x3(float4 shadowAtlasSize, float3 coord, float2 sam
 #endif
 
     float shadow = 0.0;
-    float fetchesWeights[4];
-    float2 fetchesUV[4];
+	//float fetchesWeights[4];
+	//float2 fetchesUV[4];
+    real fetchesWeights[4];
+    real2 fetchesUV[4];
 
     SampleShadow_ComputeSamples_Tent_3x3(shadowAtlasSize, coord.xy, fetchesWeights, fetchesUV);
     for (int i = 0; i < 4; i++)
@@ -41,8 +43,10 @@ float SampleShadow_PCF_Tent_5x5(float4 shadowAtlasSize, float3 coord, float2 sam
 #endif
 
     float shadow = 0.0;
-    float fetchesWeights[9];
-    float2 fetchesUV[9];
+    //float fetchesWeights[9];
+    //float2 fetchesUV[9];
+	real fetchesWeights[9];
+	real2 fetchesUV[9];
 
     SampleShadow_ComputeSamples_Tent_5x5(shadowAtlasSize, coord.xy, fetchesWeights, fetchesUV);
 
@@ -89,8 +93,11 @@ float SampleShadow_PCF_Tent_7x7(float4 shadowAtlasSize, float3 coord, float2 sam
 #endif
 
     float shadow = 0.0;
-    float fetchesWeights[16];
-    float2 fetchesUV[16];
+    //float fetchesWeights[16];
+    //float2 fetchesUV[16];
+
+	real fetchesWeights[16];
+	real2 fetchesUV[16];
 
     SampleShadow_ComputeSamples_Tent_7x7(shadowAtlasSize, coord.xy, fetchesWeights, fetchesUV);
 

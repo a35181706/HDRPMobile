@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 0.54280037, g: 0.5145337, b: 0.6241504, a: 1}
+  m_IndirectSpecularColor: {r: 0.03799501, g: 0.036017727, b: 0.04369543, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -420,6 +420,7 @@ MonoBehaviour:
     m_Bits: 4294967295
   volumeAnchorOverride: {fileID: 0}
   antialiasing: 0
+  SMAAQuality: 2
   dithering: 0
   stopNaNs: 0
   physicalParameters:
@@ -505,7 +506,7 @@ GameObject:
   - component: {fileID: 1008481559}
   - component: {fileID: 1008481561}
   m_Layer: 0
-  m_Name: GameObject
+  m_Name: Volume
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -527,7 +528,7 @@ MonoBehaviour:
   priority: 0
   blendDistance: 0
   weight: 1
-  sharedProfile: {fileID: 11400000, guid: 59799d2bfccdf66468ce121253a4951c, type: 2}
+  sharedProfile: {fileID: 11400000, guid: 86b7aa3f9821b864b8d54e5031250c8f, type: 2}
 --- !u!4 &1008481560
 Transform:
   m_ObjectHideFlags: 0
