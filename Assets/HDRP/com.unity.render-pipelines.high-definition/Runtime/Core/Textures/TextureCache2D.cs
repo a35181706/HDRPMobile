@@ -73,7 +73,6 @@ namespace UnityEngine.Experimental.Rendering
         {
             var res = AllocTextureArray(numTextures);
             m_NumMipLevels = GetNumMips(width, height);
-            Debug.LogError("TextureCache2D -- numTextures:" + numTextures + ",w=" + width + ",h=" + height + ",format=" + format );
             m_Cache = new Texture2DArray(width, height, numTextures, format, isMipMapped)
             {
                 hideFlags = HideFlags.HideAndDontSave,
