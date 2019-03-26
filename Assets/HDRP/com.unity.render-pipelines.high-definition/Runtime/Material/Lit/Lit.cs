@@ -197,13 +197,13 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             gBufferUsage = new GBufferUsage[gBufferCount];
             enableWrite = new bool[gBufferCount];
 
-            RTFormat[0] = GraphicsFormat.R8G8B8A8_SRGB; // Albedo sRGB / SSSBuffer
+            RTFormat[0] = HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_SRGB); // Albedo sRGB / SSSBuffer
             gBufferUsage[0] = GBufferUsage.SubsurfaceScattering;
             enableWrite[0] = false;
-            RTFormat[1] = GraphicsFormat.R8G8B8A8_UNorm; // Normal Buffer
+            RTFormat[1] = HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_UNorm); // Normal Buffer
             gBufferUsage[1] = GBufferUsage.Normal;
             enableWrite[1] = true;                    // normal buffer is used as RWTexture to composite decals in forward
-            RTFormat[2] = GraphicsFormat.R8G8B8A8_UNorm; // Data
+            RTFormat[2] = HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_UNorm); // Data
             gBufferUsage[2] = GBufferUsage.None;
             enableWrite[2] = false;
             RTFormat[3] = Builtin.GetLightingBufferFormat();
@@ -214,7 +214,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
             if (supportLightLayers)
             {
-                RTFormat[index] = GraphicsFormat.R8G8B8A8_UNorm;
+                RTFormat[index] = HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_UNorm);
                 gBufferUsage[index] = GBufferUsage.LightLayers;
                 index++;
             }

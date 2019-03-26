@@ -60,11 +60,11 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             {
                 string momentShadowMapName = m_Name + "Moment";
                 m_AtlasMoments = new RTHandleSystem.RTHandle[1];
-                m_AtlasMoments[0] = RTHandles.Alloc(width, height, filterMode: FilterMode.Point, colorFormat: GraphicsFormat.R32G32B32A32_SFloat, enableRandomWrite: true, name: momentShadowMapName);
+                m_AtlasMoments[0] = RTHandles.Alloc(width, height, filterMode: FilterMode.Point, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32G32B32A32_SFloat), enableRandomWrite: true, name: momentShadowMapName);
                 string intermediateSummedAreaName = m_Name + "IntermediateSummedArea";
-                m_IntermediateSummedAreaTexture = RTHandles.Alloc(width, height, filterMode: FilterMode.Point, colorFormat: GraphicsFormat.R32G32B32A32_SInt, enableRandomWrite: true, name: intermediateSummedAreaName);
+                m_IntermediateSummedAreaTexture = RTHandles.Alloc(width, height, filterMode: FilterMode.Point, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32G32B32A32_SInt), enableRandomWrite: true, name: intermediateSummedAreaName);
                 string summedAreaName = m_Name + "SummedAreaFinal";
-                m_SummedAreaTexture = RTHandles.Alloc(width, height, filterMode: FilterMode.Point, colorFormat: GraphicsFormat.R32G32B32A32_SInt, enableRandomWrite: true, name: summedAreaName);
+                m_SummedAreaTexture = RTHandles.Alloc(width, height, filterMode: FilterMode.Point, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32G32B32A32_SInt), enableRandomWrite: true, name: summedAreaName);
             }
             else if (m_isBlurredEVSM)
             {
@@ -72,7 +72,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 m_AtlasMoments = new RTHandleSystem.RTHandle[2];
                 for (int i = 0; i < 2; ++i)
                 {
-                    m_AtlasMoments[i] = RTHandles.Alloc(width / 2, height / 2, filterMode: FilterMode.Point, colorFormat: GraphicsFormat.R32G32_SFloat, useMipMap: true, autoGenerateMips: false, enableRandomWrite: true, name: momentShadowMapNames[i]);
+                    m_AtlasMoments[i] = RTHandles.Alloc(width / 2, height / 2, filterMode: FilterMode.Point, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32G32_SFloat), useMipMap: true, autoGenerateMips: false, enableRandomWrite: true, name: momentShadowMapNames[i]);
                 }
             }
 

@@ -376,8 +376,9 @@ MonoBehaviour:
   swordPrefabs:
   - {fileID: 2000286364655073129, guid: 3cdf1fa52be8b8445869bc4ee09d6951, type: 3}
   - {fileID: 2000286364655073129, guid: 40f925a8dac0ee84eb07145068c7ee38, type: 3}
-  earchSwordCout: 1000
+  earchSwordCout: 500
   mesh: {fileID: 4300000, guid: 7a154d6d51098b042b0d9a91e8a20e65, type: 2}
+  LitMaterial: {fileID: 2100000, guid: 73c176f402d2c2f4d929aa5da7585d17, type: 2}
 --- !u!1 &303484207
 GameObject:
   m_ObjectHideFlags: 0
@@ -391,7 +392,7 @@ GameObject:
   - component: {fileID: 303484209}
   - component: {fileID: 303484208}
   m_Layer: 0
-  m_Name: Sphere
+  m_Name: Lit
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -427,7 +428,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 73c176f402d2c2f4d929aa5da7585d17, type: 2}
+  - {fileID: 2100000, guid: 1ec5e919410e8cd4bb5fefa4b217554e, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -463,8 +464,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 303484207}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.19, y: -12.29, z: 63.85}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 0.99, y: -12.49, z: 63.85}
+  m_LocalScale: {x: 2, y: 2, z: 2}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 1

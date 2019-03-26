@@ -19,9 +19,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             NeighborhoodBlending = 2
         }
 
-        const GraphicsFormat k_ColorFormat         = GraphicsFormat.B10G11R11_UFloatPack32;
-        const GraphicsFormat k_CoCFormat           = GraphicsFormat.R16_SFloat;
-        const GraphicsFormat k_ExposureFormat      = GraphicsFormat.R32G32_SFloat;
+        static GraphicsFormat k_ColorFormat         = HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.B10G11R11_UFloatPack32);
+        static GraphicsFormat k_CoCFormat           = HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16_SFloat);
+        static GraphicsFormat k_ExposureFormat      = HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32G32_SFloat);
 
         readonly RenderPipelineResources m_Resources;
         bool m_ResetHistory;
@@ -162,12 +162,12 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
             // Misc targets
             m_TempTexture1024 = RTHandles.Alloc(
-                1024, 1024, colorFormat: GraphicsFormat.R16G16_SFloat,
+                1024, 1024, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16_SFloat),
                 enableRandomWrite: true, name: "Average Luminance Temp 1024"
             );
 
             m_TempTexture32 = RTHandles.Alloc(
-                32, 32, colorFormat: GraphicsFormat.R16G16_SFloat,
+                32, 32, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16_SFloat),
                 enableRandomWrite: true, name: "Average Luminance Temp 32"
             );
 
@@ -1290,7 +1290,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             {
                 return rtHandleSystem.Alloc(
                     Vector2.one, depthBufferBits: DepthBits.None, filterMode: FilterMode.Point,
-                    colorFormat: GraphicsFormat.R16_SFloat, enableRandomWrite: true, xrInstancing: true, name: "CoC History"
+                    colorFormat:HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16_SFloat), enableRandomWrite: true, xrInstancing: true, name: "CoC History"
                 );
             }
 
@@ -1325,15 +1325,15 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             Vector2 tileTexScale = new Vector2((float)tileTexWidth / camera.actualWidth, (float)tileTexHeight / camera.actualHeight);
             Vector4 tileTargetSize = new Vector4(tileTexWidth, tileTexHeight, 1.0f / tileTexWidth, 1.0f / tileTexHeight);
 
-            RTHandle preppedVelocity = m_Pool.Get(Vector2.one, GraphicsFormat.B10G11R11_UFloatPack32);
-            RTHandle minMaxTileVel = m_Pool.Get(tileTexScale, GraphicsFormat.B10G11R11_UFloatPack32);
-            RTHandle maxTileNeigbourhood = m_Pool.Get(tileTexScale, GraphicsFormat.B10G11R11_UFloatPack32);
+            RTHandle preppedVelocity = m_Pool.Get(Vector2.one, HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.B10G11R11_UFloatPack32));
+            RTHandle minMaxTileVel = m_Pool.Get(tileTexScale, HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.B10G11R11_UFloatPack32));
+            RTHandle maxTileNeigbourhood = m_Pool.Get(tileTexScale, HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.B10G11R11_UFloatPack32));
             RTHandle tileToScatterMax = null;
             RTHandle tileToScatterMin = null;
             if (scattering)
             {
-                tileToScatterMax = m_Pool.Get(tileTexScale, GraphicsFormat.R32_UInt);
-                tileToScatterMin = m_Pool.Get(tileTexScale, GraphicsFormat.R16_UInt);
+                tileToScatterMax = m_Pool.Get(tileTexScale, HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32_UInt));
+                tileToScatterMin = m_Pool.Get(tileTexScale, HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16_UInt));
             }
 
             float screenMagnitude = (new Vector2(camera.actualWidth, camera.actualHeight).magnitude);
@@ -2081,8 +2081,8 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         #region SMAA
         void DoSMAA(CommandBuffer cmd, HDCamera camera, RTHandle source, RTHandle destination, RTHandle depthBuffer)
         {
-            RTHandle SMAAEdgeTex = m_Pool.Get(Vector2.one, GraphicsFormat.R8G8B8A8_UNorm);
-            RTHandle SMAABlendTex = m_Pool.Get(Vector2.one, GraphicsFormat.R8G8B8A8_UNorm);
+            RTHandle SMAAEdgeTex = m_Pool.Get(Vector2.one, HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_UNorm));
+            RTHandle SMAABlendTex = m_Pool.Get(Vector2.one, HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_UNorm));
 
             // -----------------------------------------------------------------------------
 

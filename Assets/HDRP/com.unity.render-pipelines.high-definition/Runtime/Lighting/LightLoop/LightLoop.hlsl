@@ -417,5 +417,5 @@ void LightLoop( float3 V, PositionInputs posInput, PreLightData preLightData, BS
     PostEvaluateBSDF(   context, V, posInput, preLightData, bsdfData, builtinData, aggregateLighting,
                         diffuseLighting, specularLighting);
 
-    ApplyDebug(context, posInput, bsdfData, diffuseLighting, specularLighting);
+   // ApplyDebug(context, posInput, bsdfData, diffuseLighting, specularLighting);
 }

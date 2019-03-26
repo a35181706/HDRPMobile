@@ -103,7 +103,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             // Destination targets
             m_AmbientOcclusionTex = RTHandles.Alloc(Vector2.one,
                 filterMode: FilterMode.Bilinear,
-                colorFormat: GraphicsFormat.R8_UNorm,
+                colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8_UNorm),
                 enableRandomWrite: true,
                 xrInstancing: true,
                 useDynamicScale: true,
@@ -114,7 +114,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             {
                 m_MultiAmbientOcclusionTex = RTHandles.Alloc(Vector2.one,
                     filterMode: FilterMode.Bilinear,
-                    colorFormat: GraphicsFormat.R8G8_UNorm,
+                    colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8_UNorm),
                     enableRandomWrite: true,
                     xrInstancing: true,
                     useDynamicScale: true,
@@ -142,9 +142,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 };
             }
 
-            var fmtFP16 = supportMSAA ? GraphicsFormat.R16G16_SFloat  : GraphicsFormat.R16_SFloat;
-            var fmtFP32 = supportMSAA ? GraphicsFormat.R32G32_SFloat : GraphicsFormat.R32_SFloat;
-            var fmtFX8  = supportMSAA ? GraphicsFormat.R8G8_UNorm    : GraphicsFormat.R8_UNorm;
+            var fmtFP16 = supportMSAA ? HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16_SFloat)  : HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16_SFloat);
+            var fmtFP32 = supportMSAA ? HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32G32_SFloat) : HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32_SFloat);
+            var fmtFX8  = supportMSAA ? HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8_UNorm)    : HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8_UNorm);
 
             // All of these are pre-allocated to 1x1 and will be automatically scaled properly by
             // the internal RTHandle system

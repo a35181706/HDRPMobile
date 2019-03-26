@@ -233,7 +233,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             return rtHandleSystem.Alloc(scaleFunc:         ComputeHistoryVBufferResolutionXY,
                 slices:            d,
                 dimension:         TextureDimension.Tex3D,
-                colorFormat:       GraphicsFormat.R16G16B16A16_SFloat,
+                colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16B16A16_SFloat),
                 enableRandomWrite: true,
                 enableMSAA:        false,
                 /* useDynamicScale: true, // <- TODO */
@@ -259,7 +259,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             m_DensityBufferHandle = RTHandles.Alloc(scaleFunc:         ComputeVBufferResolutionXY,
                     slices:            d,
                     dimension:         TextureDimension.Tex3D,
-                    colorFormat:       GraphicsFormat.R16G16B16A16_SFloat, // 8888_sRGB is not precise enough
+                    colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16B16A16_SFloat), // 8888_sRGB is not precise enough
                     enableRandomWrite: true,
                     enableMSAA:        false,
                     /* useDynamicScale: true, // <- TODO */
@@ -268,7 +268,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             m_LightingBufferHandle = RTHandles.Alloc(scaleFunc:         ComputeVBufferResolutionXY,
                     slices:            d,
                     dimension:         TextureDimension.Tex3D,
-                    colorFormat:       GraphicsFormat.R16G16B16A16_SFloat,
+                    colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16B16A16_SFloat),
                     enableRandomWrite: true,
                     enableMSAA:        false,
                     /* useDynamicScale: true, // <- TODO */

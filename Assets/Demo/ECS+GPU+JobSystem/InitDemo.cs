@@ -19,7 +19,7 @@ public class InitDemo : MonoBehaviour
     public static float topY = 20f;
     public static float bottomY = -100f;
 
-
+    public Material LitMaterial;
     // Use this for initialization
     void Start()
     {

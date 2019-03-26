@@ -277,7 +277,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             {
                 if (m_Atlas == null)
                 {
-                    m_Atlas = new Texture2DAtlas(HDUtils.hdrpSettings.decalSettings.atlasWidth, HDUtils.hdrpSettings.decalSettings.atlasHeight, GraphicsFormat.R8G8B8A8_UNorm);
+                    m_Atlas = new Texture2DAtlas(HDUtils.hdrpSettings.decalSettings.atlasWidth, HDUtils.hdrpSettings.decalSettings.atlasHeight, HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_UNorm));
                 }
                 return m_Atlas;
             }

@@ -45,7 +45,8 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         // should this be combined into common class shared with Lit.cs???
         static public int GetMaterialDBufferCount() { return (int)DBufferMaterial.Count; }
 
-        static GraphicsFormat[] m_RTFormat = { GraphicsFormat.R8G8B8A8_SRGB, GraphicsFormat.R8G8B8A8_UNorm, GraphicsFormat.R8G8B8A8_UNorm, GraphicsFormat.R8G8_UNorm};
+        static GraphicsFormat[] m_RTFormat = { HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_SRGB), HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_UNorm),
+                                               HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_UNorm), HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8_UNorm)};
 
         static public void GetMaterialDBufferDescription(out GraphicsFormat[] RTFormat)
         {

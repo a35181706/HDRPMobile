@@ -177,7 +177,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
         public GraphicsFormat GetColorBufferFormat()
         {
-            return (GraphicsFormat)m_Asset.currentPlatformRenderPipelineSettings.colorBufferFormat;
+            return HDRenderPipeline.OverrideRTGraphicsFormat((GraphicsFormat)m_Asset.currentPlatformRenderPipelineSettings.colorBufferFormat);
         }
         public int GetCurrentShadowCount() { return m_LightLoop.GetCurrentShadowCount(); }
         public int GetDecalAtlasMipCount()
@@ -413,24 +413,24 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             m_SharedRTManager.InitSharedBuffers(m_GbufferManager, m_Asset.currentPlatformRenderPipelineSettings, m_Asset.renderPipelineResources);
 
             m_CameraColorBuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: GetColorBufferFormat(), enableRandomWrite: true, useMipMap: false, xrInstancing: true, useDynamicScale: true, name: "CameraColor");
-            m_CameraSssDiffuseLightingBuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: GraphicsFormat.B10G11R11_UFloatPack32, enableRandomWrite: true, xrInstancing: true, useDynamicScale: true, name: "CameraSSSDiffuseLighting");
+            m_CameraSssDiffuseLightingBuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.B10G11R11_UFloatPack32), enableRandomWrite: true, xrInstancing: true, useDynamicScale: true, name: "CameraSSSDiffuseLighting");
 
             m_DistortionBuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: Builtin.GetDistortionBufferFormat(), xrInstancing: true, useDynamicScale: true, name: "Distortion");
 
             // TODO: For MSAA, we'll need to add a Draw path in order to support MSAA properly
             // Use RG16 as we only have one deferred directional and one screen space shadow light currently
-            m_ScreenSpaceShadowsBuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: GraphicsFormat.R16_UNorm, enableRandomWrite: true, xrInstancing: true, useDynamicScale: true, name: "ScreenSpaceShadowsBuffer");
+            m_ScreenSpaceShadowsBuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16_UNorm), enableRandomWrite: true, xrInstancing: true, useDynamicScale: true, name: "ScreenSpaceShadowsBuffer");
 
             if (settings.supportSSR)
             {
                 // m_SsrDebugTexture    = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: RenderTextureFormat.ARGBFloat, sRGB: false, enableRandomWrite: true, xrInstancing: true, useDynamicScale: true, name: "SSR_Debug_Texture");
-                m_SsrHitPointTexture = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: GraphicsFormat.R16G16_UNorm, enableRandomWrite: true, xrInstancing: true, useDynamicScale: true, name: "SSR_Hit_Point_Texture");
-                m_SsrLightingTexture = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: GraphicsFormat.R16G16B16A16_SFloat, enableRandomWrite: true, xrInstancing: true, useDynamicScale: true, name: "SSR_Lighting_Texture");
+                m_SsrHitPointTexture = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16_UNorm), enableRandomWrite: true, xrInstancing: true, useDynamicScale: true, name: "SSR_Hit_Point_Texture");
+                m_SsrLightingTexture = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16B16A16_SFloat), enableRandomWrite: true, xrInstancing: true, useDynamicScale: true, name: "SSR_Lighting_Texture");
             }
 
             if (Debug.isDebugBuild)
             {
-                m_DebugColorPickerBuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: GraphicsFormat.R16G16B16A16_SFloat, useDynamicScale: true, name: "DebugColorPicker");
+                m_DebugColorPickerBuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16B16A16_SFloat), useDynamicScale: true, name: "DebugColorPicker");
                 m_DebugFullScreenTempBuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: GetColorBufferFormat(), xrInstancing: true, useDynamicScale: true, name: "DebugFullScreen");
                 m_IntermediateAfterPostProcessBuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: GetColorBufferFormat(), useDynamicScale: true, xrInstancing: true, name: "AfterPostProcess"); // Needs to be FP16 because output target might be HDR
             }
@@ -3549,6 +3549,43 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             {
                 context.ExecuteCommandBuffer(buffer);
             }
+        }
+
+        /// <summary>
+        /// 根据Platform来切换RT格式
+        /// </summary>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        public static GraphicsFormat OverrideRTGraphicsFormat(GraphicsFormat source)
+        {
+            if (Application.platform == RuntimePlatform.WindowsEditor ||
+                Application.platform == RuntimePlatform.WindowsPlayer)
+            {
+                return source;
+            }
+
+            if (Application.platform == RuntimePlatform.Android)
+            {
+                if (source == GraphicsFormat.R8_UNorm ||
+                    source == GraphicsFormat.R16_UNorm ||
+                    source == GraphicsFormat.R16_SFloat)
+                {
+                    return GraphicsFormat.R32_SFloat;
+                }
+                if (source == GraphicsFormat.R16G16_SFloat)
+                {
+                    return GraphicsFormat.R32G32_SFloat;
+                }
+                if (source == GraphicsFormat.B10G11R11_UFloatPack32)
+                {
+                    return GraphicsFormat.R16G16B16A16_SFloat;
+                }
+
+                return source;
+            }
+
+            Debug.LogError("不支持的平台:" + Application.platform + ",格式:" + source);
+            return source;
         }
     }
 }

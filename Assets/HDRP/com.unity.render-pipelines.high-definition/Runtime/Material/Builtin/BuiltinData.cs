@@ -72,23 +72,23 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
         public static GraphicsFormat GetLightingBufferFormat()
         {
-            return GraphicsFormat.B10G11R11_UFloatPack32;
+            return HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.B10G11R11_UFloatPack32);
         }
 
         public static GraphicsFormat GetShadowMaskBufferFormat()
         {
-            return GraphicsFormat.R8G8B8A8_UNorm;
+            return HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_UNorm);
         }
 
         public static GraphicsFormat GetVelocityBufferFormat()
         {
-            return GraphicsFormat.R16G16_SFloat; // TODO: We should use 16bit normalized instead, better precision // RGInt
+            return HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16_SFloat); // TODO: We should use 16bit normalized instead, better precision // RGInt
         }
 
         public static GraphicsFormat GetDistortionBufferFormat()
         {
             // TODO: // This format need to be additive blendable and include distortionBlur, blend mode different for alpha value
-            return GraphicsFormat.R16G16B16A16_SFloat;
+            return HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16B16A16_SFloat);
         }
     }
 }
