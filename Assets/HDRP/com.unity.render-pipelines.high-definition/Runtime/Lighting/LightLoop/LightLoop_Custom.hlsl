@@ -69,6 +69,77 @@ void ApplyDebug(LightLoopContext lightLoopContext, PositionInputs posInput, BSDF
 #endif
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//-----------------------------------------------------------------------------
+// PostEvaluateBSDF
+// ----------------------------------------------------------------------------
+
+void PostEvaluateBSDF1(LightLoopContext lightLoopContext,
+	float3 V, PositionInputs posInput,
+	PreLightData preLightData, BSDFData bsdfData, BuiltinData builtinData, AggregateLighting lighting,
+	out float3 diffuseLighting, out float3 specularLighting)
+{
+	//    AmbientOcclusionFactor aoFactor;
+	//    // Use GTAOMultiBounce approximation for ambient occlusion (allow to get a tint from the baseColor)
+	//#if 0
+	//    GetScreenSpaceAmbientOcclusion(posInput.positionSS, preLightData.NdotV, bsdfData.perceptualRoughness, bsdfData.ambientOcclusion, bsdfData.specularOcclusion, aoFactor);
+	//#else
+	//    GetScreenSpaceAmbientOcclusionMultibounce(posInput.positionSS, preLightData.NdotV, bsdfData.perceptualRoughness, bsdfData.ambientOcclusion, bsdfData.specularOcclusion, bsdfData.diffuseColor, bsdfData.fresnel0, aoFactor);
+	//#endif
+	//    ApplyAmbientOcclusionFactor(aoFactor, builtinData, lighting);
+	//
+		// Subsurface scattering mode
+	float3 modifiedDiffuseColor = GetModifiedDiffuseColorForSSS(bsdfData);
+
+	// Apply the albedo to the direct diffuse lighting (only once). The indirect (baked)
+	// diffuse lighting has already multiply the albedo in ModifyBakedDiffuseLighting().
+	// Note: In deferred bakeDiffuseLighting also contain emissive and in this case emissiveColor is 0
+	diffuseLighting = modifiedDiffuseColor * lighting.direct.diffuse + builtinData.bakeDiffuseLighting + builtinData.emissiveColor;
+
+	// If refraction is enable we use the transmittanceMask to lerp between current diffuse lighting and refraction value
+	// Physically speaking, transmittanceMask should be 1, but for artistic reasons, we let the value vary
+	//
+	// Note we also transfer the refracted light (lighting.indirect.specularTransmitted) into diffuseLighting
+	// since we know it won't be further processed: it is called at the end of the LightLoop(), but doing this
+	// enables opacity to affect it (in ApplyBlendMode()) while the rest of specularLighting escapes it.
+#if HAS_REFRACTION
+	diffuseLighting = lerp(diffuseLighting, lighting.indirect.specularTransmitted, bsdfData.transmittanceMask * _EnableSSRefraction);
+#endif
+
+	specularLighting = lighting.direct.specular + lighting.indirect.specularReflected;
+	// Rescale the GGX to account for the multiple scattering.
+	specularLighting *= 1.0 + bsdfData.fresnel0 * preLightData.energyCompensation;
+
+#ifdef DEBUG_DISPLAY
+	 //PostEvaluateBSDFDebugDisplay(aoFactor, builtinData, lighting, bsdfData.diffuseColor, diffuseLighting, specularLighting);
+#endif
+}
+
 void LightLoop( float3 V, PositionInputs posInput, PreLightData preLightData, BSDFData bsdfData, BuiltinData builtinData, uint featureFlags,
                 out float3 diffuseLighting,
                 out float3 specularLighting)
@@ -414,8 +485,9 @@ void LightLoop( float3 V, PositionInputs posInput, PreLightData preLightData, BS
 
     // Also Apply indiret diffuse (GI)
     // PostEvaluateBSDF will perform any operation wanted by the material and sum everything into diffuseLighting and specularLighting
-    PostEvaluateBSDF(   context, V, posInput, preLightData, bsdfData, builtinData, aggregateLighting,
+    PostEvaluateBSDF1(   context, V, posInput, preLightData, bsdfData, builtinData, aggregateLighting,
                         diffuseLighting, specularLighting);
 
     ApplyDebug(context, posInput, bsdfData, diffuseLighting, specularLighting);
 }
+
