@@ -118,6 +118,7 @@
 //#define TEMPLATE_1_REAL TEMPLATE_1_FLT
 //#define TEMPLATE_2_REAL TEMPLATE_2_FLT
 //#define TEMPLATE_3_REAL TEMPLATE_3_FLT
+
 #else
 
 #define real float

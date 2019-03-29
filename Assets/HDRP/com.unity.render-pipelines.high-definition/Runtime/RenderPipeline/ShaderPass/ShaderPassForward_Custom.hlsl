@@ -104,6 +104,77 @@ void PostInitBuiltinData1(float3 V, PositionInputs posInput, SurfaceData surface
 	ApplyDebugToBuiltinData(builtinData);
 }
 
+// Ref: "Efficient Evaluation of Irradiance Environment Maps" from ShaderX 2
+real3 SHEvalLinearL0L11(real3 N, real4 shAr, real4 shAg, real4 shAb)
+{
+	real4 vA = real4(N, 1.0);
+
+	real3 x1;
+	// Linear (L1) + constant (L0) polynomial terms
+	x1.r = dot(shAr, vA);
+	x1.g = dot(shAg, vA);
+	x1.b = dot(shAb, vA);
+
+	return x1;
+}
+
+real3 SHEvalLinearL21(real3 N, real4 shBr, real4 shBg, real4 shBb, real4 shC)
+{
+	real3 x2;
+	// 4 of the quadratic (L2) polynomials
+	real4 vB = N.xyzz * N.yzzx;
+
+	x2.r = dot(shBr, vB);
+	x2.g = dot(shBg, vB);
+	x2.b = dot(shBb, vB);
+
+	// Final (5th) quadratic (L2) polynomial
+	real vC = N.x * N.x - N.y * N.y;
+	real3 x3 = shC.rgb * vC;
+
+	return x2 + x3;
+}
+
+
+#if HAS_HALF
+half3 SampleSH91(half4 SHCoefficients[7], half3 N)
+{
+	half4 shAr = SHCoefficients[0];
+	half4 shAg = SHCoefficients[1];
+	half4 shAb = SHCoefficients[2];
+	half4 shBr = SHCoefficients[3];
+	half4 shBg = SHCoefficients[4];
+	half4 shBb = SHCoefficients[5];
+	half4 shCr = SHCoefficients[6];
+
+	// Linear + constant polynomial terms
+	half3 res = SHEvalLinearL0L11(N, shAr, shAg, shAb);
+
+	// Quadratic polynomials
+	res += SHEvalLinearL21(N, shBr, shBg, shBb, shCr);
+
+	return res;
+}
+#endif
+float3 SampleSH91(float4 SHCoefficients[7], float3 N)
+{
+	float4 shAr = SHCoefficients[0];
+	float4 shAg = SHCoefficients[1];
+	float4 shAb = SHCoefficients[2];
+	float4 shBr = SHCoefficients[3];
+	float4 shBg = SHCoefficients[4];
+	float4 shBb = SHCoefficients[5];
+	float4 shCr = SHCoefficients[6];
+
+	// Linear + constant polynomial terms
+	float3 res = SHEvalLinearL0L11(N, shAr, shAg, shAb);
+	
+	res += SHEvalLinearL21(N, shBr, shBg, shBb, shCr);
+
+	return res;	// Quadratic polynomials
+}
+
+
 
 // In unity we can have a mix of fully baked lightmap (static lightmap) + enlighten realtime lightmap (dynamic lightmap)
 // for each case we can have directional lightmap or not.
@@ -113,10 +184,12 @@ float3 SampleBakedGI1(float3 positionRWS, float3 normalWS, float2 uvStaticLightm
 	// If there is no lightmap, it assume lightprobe
 #if !defined(LIGHTMAP_ON) && !defined(DYNAMICLIGHTMAP_ON)
 
+
 	if (unity_ProbeVolumeParams.x == 0.0)
 	{
-		// TODO: pass a tab of coefficient instead!
+		//// TODO: pass a tab of coefficient instead!
 		real4 SHCoefficients[7];
+
 		SHCoefficients[0] = unity_SHAr;
 		SHCoefficients[1] = unity_SHAg;
 		SHCoefficients[2] = unity_SHAb;
@@ -124,7 +197,9 @@ float3 SampleBakedGI1(float3 positionRWS, float3 normalWS, float2 uvStaticLightm
 		SHCoefficients[4] = unity_SHBg;
 		SHCoefficients[5] = unity_SHBb;
 		SHCoefficients[6] = unity_SHC;	
-		return SampleSH9(SHCoefficients, normalWS);
+	
+
+		return SampleSH91(SHCoefficients, normalWS); 
 	}
 	else
 	{
@@ -306,7 +381,7 @@ void GetSurfaceAndBuiltinData1(FragInputs input, float3 V, inout PositionInputs 
 #endif
 
 	// We perform the conversion to world of the normalTS outside of the GetSurfaceData
-	// so it allow us to correctly deal with detail normal map and optimize the code for the layered shaders
+// so it allow us to correctly deal with detail normal map and optimize the code for the layered shaders
 	float3 normalTS;
 	float3 bentNormalTS;
 	float3 bentNormalWS;
@@ -352,6 +427,8 @@ void GetSurfaceAndBuiltinData1(FragInputs input, float3 V, inout PositionInputs 
 	// Specular AA
 	surfaceData.perceptualSmoothness = GeometricNormalFiltering(surfaceData.perceptualSmoothness, input.worldToTangent[2], _SpecularAAScreenSpaceVariance, _SpecularAAThreshold);
 #endif
+
+
 
 #if defined(DEBUG_DISPLAY)
 	if (_DebugMipMapMode != DEBUGMIPMAPMODE_NONE)

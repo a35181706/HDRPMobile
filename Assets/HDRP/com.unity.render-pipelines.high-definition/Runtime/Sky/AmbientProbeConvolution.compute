@@ -12,11 +12,11 @@ TEXTURECUBE(_AmbientProbeInputCubemap);
 
 // Constants from SetSHEMapConstants function in the Stupid Spherical Harmonics Tricks paper:
 // http://www.ppsloan.org/publications/StupidSH36.pdf
-#define sqrtPI (sqrt(PI))
+#define sqrtPI (1.7724538)
 #define fC0 (0.282095 * (1.0 / (2.0 * sqrtPI)))
-#define fC1 (0.488603 * (sqrt ( 3.0) / ( 3.0 * sqrtPI)))
-#define fC2 (1.092548 * (sqrt (15.0) / ( 8.0 * sqrtPI)))
-#define fC3 (0.315392 * (sqrt ( 5.0) / (16.0 * sqrtPI)))
+#define fC1 (0.488603 * (1.73205 / ( 3.0 * sqrtPI)))
+#define fC2 (1.092548 * (3.87298 / ( 8.0 * sqrtPI)))
+#define fC3 (0.315392 * (2.23606 / (16.0 * sqrtPI)))
 #define fC4 (0.546274 * 0.5 * fC2)
 
 #define SAMPLE_COUNT 256
@@ -71,6 +71,7 @@ void KERNEL_NAME(uint dispatchThreadId : SV_DispatchThreadID)
         outputSHCoeffs[channel * 9 + 6] = (3.0 * n.z * n.z - 1.0) * value[channel];
         outputSHCoeffs[channel * 9 + 7] = -n.x * n.z * value[channel];
         outputSHCoeffs[channel * 9 + 8] = (n.x * n.x - n.y * n.y) * value[channel];
+
     }
 
 #ifdef SUPPORTS_WAVE_INTRINSICS
@@ -145,7 +146,7 @@ void KERNEL_NAME(uint dispatchThreadId : SV_DispatchThreadID)
     {
         for (uint i = 0; i < SH_COEFF_COUNT; ++i)
         {
-            _AmbientProbeOutputBuffer[i] = outputSHCoeffs[i] * ConvolveCosineLobeBandFactor[i % 9] * weight;
+            _AmbientProbeOutputBuffer[i] = outputSHCoeffs[i] *  ConvolveCosineLobeBandFactor[i % 9] * weight;
         }
     }
 }

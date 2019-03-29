@@ -245,7 +245,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         using (new ProfilingSample(cmd, "Update Env: Generate Lighting Cubemap"))
                         {
                             RenderSkyToCubemap(skyContext);
-
+                         
                             if (updateAmbientProbe)
                             {
                                 using (new ProfilingSample(cmd, "Update Ambient Probe"))

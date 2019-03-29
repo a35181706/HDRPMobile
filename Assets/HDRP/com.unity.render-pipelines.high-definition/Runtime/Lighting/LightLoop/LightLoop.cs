@@ -1757,10 +1757,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         public bool PrepareLightsForGPU(CommandBuffer cmd, HDCamera hdCamera, CullingResults cullResults,
             HDProbeCullingResults hdProbeCullingResults, DensityVolumeList densityVolumes, DebugDisplaySettings debugDisplaySettings)
         {
-        #if ENABLE_RAYTRACING
+#if ENABLE_RAYTRACING
             HDRaytracingEnvironment raytracingEnv = m_RayTracingManager.CurrentEnvironment();
-        #endif
-
+#endif
             using (new ProfilingSample(cmd, "Prepare Lights For GPU"))
             {
                 Camera camera = hdCamera.camera;

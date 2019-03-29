@@ -2795,7 +2795,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 }
                 else
                 {
-                    m_LightLoop.RenderForward(camera, cmd, pass == ForwardPass.Opaque);
+                    //m_LightLoop.RenderForward(camera, cmd, pass == ForwardPass.Opaque);
 
                     if (pass == ForwardPass.Opaque)
                     {
@@ -2824,7 +2824,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         }
                         else
                         {
-                            HDUtils.SetRenderTarget(cmd, hdCamera, hdCamera.frameSettings.IsEnabled(FrameSettingsField.MSAA) ? m_CameraColorMSAABuffer : m_CameraColorBuffer, m_SharedRTManager.GetDepthStencilBuffer(hdCamera.frameSettings.IsEnabled(FrameSettingsField.MSAA)));
+                            HDUtils.SetRenderTarget(cmd, hdCamera, hdCamera.frameSettings.IsEnabled(FrameSettingsField.MSAA) ? m_CameraColorMSAABuffer : m_CameraColorBuffer,m_SharedRTManager.GetDepthStencilBuffer(hdCamera.frameSettings.IsEnabled(FrameSettingsField.MSAA)));
                         }
 
                         var passNames = hdCamera.frameSettings.litShaderMode == LitShaderMode.Forward

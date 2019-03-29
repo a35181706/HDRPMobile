@@ -305,6 +305,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
         public void UpdateEnvironment(HDCamera hdCamera, Light sunLight, CommandBuffer cmd)
         {
+
             // WORKAROUND for building the player.
             // When building the player, for some reason we end up in a state where frameCount is not updated but all currently setup shader texture are reset to null
             // resulting in a rendering error (compute shader property not bound) that makes the player building fails...
