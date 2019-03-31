@@ -32,10 +32,76 @@ PackedVaryingsToPS VertTesselation(VaryingsToDS input)
 
 #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/VertMesh.hlsl"
 
+// TODO: Here we will also have all the vertex deformation (GPU skinning, vertex animation, morph target...) or we will need to generate a compute shaders instead (better! but require work to deal with unpacking like fp16)
+// Make it inout so that VelocityPass can get the modified input values later.
+VaryingsMeshType VertMesh1(AttributesMesh input)
+{
+	VaryingsMeshType output;
+
+	UNITY_SETUP_INSTANCE_ID(input);
+	UNITY_TRANSFER_INSTANCE_ID(input, output);
+
+#if defined(HAVE_MESH_MODIFICATION)
+	input = ApplyMeshModification(input);
+#endif
+
+	// This return the camera relative position (if enable)
+	float3 positionRWS = TransformObjectToWorld(input.positionOS);
+#ifdef ATTRIBUTES_NEED_NORMAL
+	float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
+#else
+	float3 normalWS = float3(0.0, 0.0, 0.0); // We need this case to be able to compile ApplyVertexModification that doesn't use normal.
+#endif
+
+#ifdef ATTRIBUTES_NEED_TANGENT
+	float4 tangentWS = float4(TransformObjectToWorldDir(input.tangentOS.xyz), input.tangentOS.w);
+#endif
+
+//	// Do vertex modification in camera relative space (if enable)
+//#if defined(HAVE_VERTEX_MODIFICATION)
+//	ApplyVertexModification(input, normalWS, positionRWS, _Time);
+//#endif
+
+#ifdef TESSELLATION_ON
+	output.positionRWS = positionRWS;
+	output.normalWS = normalWS;
+#if defined(VARYINGS_NEED_TANGENT_TO_WORLD) || defined(VARYINGS_DS_NEED_TANGENT)
+	output.tangentWS = tangentWS;
+#endif
+#else
+#ifdef VARYINGS_NEED_POSITION_WS
+	output.positionRWS =  positionRWS;
+#endif
+	output.positionCS = TransformWorldToHClip(positionRWS);
+#ifdef VARYINGS_NEED_TANGENT_TO_WORLD
+	output.normalWS = normalWS ;
+	output.tangentWS = tangentWS;
+#endif
+#endif
+
+#if defined(VARYINGS_NEED_TEXCOORD0) || defined(VARYINGS_DS_NEED_TEXCOORD0)
+	output.texCoord0 = input.uv0;
+#endif
+#if defined(VARYINGS_NEED_TEXCOORD1) || defined(VARYINGS_DS_NEED_TEXCOORD1)
+	output.texCoord1 = input.uv1;
+#endif
+#if defined(VARYINGS_NEED_TEXCOORD2) || defined(VARYINGS_DS_NEED_TEXCOORD2)
+	output.texCoord2 = input.uv2;
+#endif
+#if defined(VARYINGS_NEED_TEXCOORD3) || defined(VARYINGS_DS_NEED_TEXCOORD3)
+	output.texCoord3 = input.uv3;
+#endif
+#if defined(VARYINGS_NEED_COLOR) || defined(VARYINGS_DS_NEED_COLOR)
+	output.color = input.color;
+#endif
+
+	return output;
+}
+
 PackedVaryingsType Vert(AttributesMesh inputMesh)
 {
     VaryingsType varyingsType;
-    varyingsType.vmesh = VertMesh(inputMesh);
+    varyingsType.vmesh = VertMesh1(inputMesh);
 
     return PackVaryingsType(varyingsType);
 }
@@ -86,8 +152,8 @@ void ModifyBakedDiffuseLighting1(float3 V, PositionInputs posInput, SurfaceData 
 	// Premultiply (back) bake diffuse lighting information with DisneyDiffuse pre-integration
 	// Note: When baking reflection probes, we approximate the diffuse with the fresnel0
 	builtinData.bakeDiffuseLighting *= ReplaceDiffuseForReflectionPass(bsdfData.fresnel0)
-		? bsdfData.fresnel0
-		: preLightData.diffuseFGD * bsdfData.diffuseColor;
+		? bsdfData.fresnel0 : preLightData.diffuseFGD * bsdfData.diffuseColor;
+
 }
 
 // InitBuiltinData must be call before calling PostInitBuiltinData
@@ -174,8 +240,6 @@ float3 SampleSH91(float4 SHCoefficients[7], float3 N)
 	return res;	// Quadratic polynomials
 }
 
-
-
 // In unity we can have a mix of fully baked lightmap (static lightmap) + enlighten realtime lightmap (dynamic lightmap)
 // for each case we can have directional lightmap or not.
 // Else we have lightprobe for dynamic/moving entity. Either SH9 per object lightprobe or SH4 per pixel per object volume probe
@@ -187,7 +251,7 @@ float3 SampleBakedGI1(float3 positionRWS, float3 normalWS, float2 uvStaticLightm
 
 	if (unity_ProbeVolumeParams.x == 0.0)
 	{
-		//// TODO: pass a tab of coefficient instead!
+		// TODO: pass a tab of coefficient instead!
 		real4 SHCoefficients[7];
 
 		SHCoefficients[0] = unity_SHAr;
@@ -255,7 +319,6 @@ float3 SampleBakedGI1(float3 positionRWS, float3 normalWS, float2 uvStaticLightm
 #endif
 }
 
-
 // For builtinData we want to allow the user to overwrite default GI in the surface shader / shader graph.
 // So we perform the following order of operation:
 // 1. InitBuiltinData - Init bakeDiffuseLighting and backBakeDiffuseLighting
@@ -296,7 +359,6 @@ void InitBuiltinData1(PositionInputs posInput, float alpha, float3 normalWS, flo
 	// Use uniform directly - The float need to be cast to uint (as unity don't support to set a uint as uniform)
 	builtinData.renderingLayers = _EnableLightLayers ? asuint(unity_RenderingLayer.x) : DEFAULT_LIGHT_LAYERS;
 }
-
 
 void GetBuiltinData1(FragInputs input, float3 V, inout PositionInputs posInput, SurfaceData surfaceData, float alpha, float3 bentNormalWS, float depthOffset, out BuiltinData builtinData)
 {
@@ -355,8 +417,49 @@ void GetBuiltinData1(FragInputs input, float3 V, inout PositionInputs posInput, 
 	PostInitBuiltinData1(V, posInput, surfaceData, builtinData);
 }
 
+real3 SurfaceGradientResolveNormal1(real3 nrmVertexNormal, real3 surfGrad)
+{
+	return normalize(nrmVertexNormal - surfGrad);
+}
+
+
+real3 TransformWorldToTangent1(real3 dirWS, real3x3 worldToTangent)
+{
+	return mul(worldToTangent, dirWS);
+}
+
+// This function convert the tangent space normal/tangent to world space and orthonormalize it + apply a correction of the normal if it is not pointing towards the near plane
+void GetNormalWS1(FragInputs input, float3 normalTS, out float3 normalWS, float3 doubleSidedConstants)
+{
+#ifdef SURFACE_GRADIENT
+
+#ifdef _DOUBLESIDED_ON
+	// Flip the displacements (the entire surface gradient) in the 'flip normal' mode.
+	float flipSign = input.isFrontFace ? 1.0 : doubleSidedConstants.x;
+	normalTS *= flipSign;
+#endif
+
+	normalWS = SurfaceGradientResolveNormal1(input.worldToTangent[2], normalTS);
+
+#else // SURFACE_GRADIENT
+
+#ifdef _DOUBLESIDED_ON
+	// Just flip the TB in the 'flip normal' mode. Conceptually wrong, but it works.
+	float flipSign = input.isFrontFace ? 1.0 : doubleSidedConstants.x;
+	input.worldToTangent[0] = flipSign * input.worldToTangent[0]; // tangent
+	input.worldToTangent[1] = flipSign * input.worldToTangent[1]; // bitangent
+#endif // _DOUBLESIDED_ON
+
+	// We need to normalize as we use mikkt tangent space and this is expected (tangent space is not normalize)
+	normalWS = normalize(TransformTangentToWorld1(normalTS, input.worldToTangent));
+
+#endif // SURFACE_GRADIENT
+}
+
+
 void GetSurfaceAndBuiltinData1(FragInputs input, float3 V, inout PositionInputs posInput, out SurfaceData surfaceData, out BuiltinData builtinData)
 {
+	ZERO_INITIALIZE(BuiltinData,builtinData);
 #ifdef LOD_FADE_CROSSFADE // enable dithering LOD transition if user select CrossFade transition in LOD group
 	uint3 fadeMaskSeed = asuint((int3)(V * _ScreenSize.xyx)); // Quantize V to _ScreenSize values
 	LODDitheringTransition(fadeMaskSeed, unity_LODFade.x);
@@ -386,7 +489,7 @@ void GetSurfaceAndBuiltinData1(FragInputs input, float3 V, inout PositionInputs 
 	float3 bentNormalTS;
 	float3 bentNormalWS;
 	float alpha = GetSurfaceData(input, layerTexCoord, surfaceData, normalTS, bentNormalTS);
-	GetNormalWS(input, normalTS, surfaceData.normalWS, doubleSidedConstants);
+	GetNormalWS1(input, normalTS, surfaceData.normalWS, doubleSidedConstants);
 
 	// Use bent normal to sample GI if available
 #ifdef _BENTNORMALMAP
@@ -446,6 +549,74 @@ void GetSurfaceAndBuiltinData1(FragInputs input, float3 V, inout PositionInputs 
 	GetBuiltinData1(input, V, posInput, surfaceData, alpha, bentNormalWS, depthOffset, builtinData);
 }
 
+// This function assumes the bitangent flip is encoded in tangentWS.w
+float3x3 BuildWorldToTangent1(float4 tangentWS, float3 normalWS)
+{
+	// tangentWS must not be normalized (mikkts requirement)
+
+	// Normalize normalWS vector but keep the renormFactor to apply it to bitangent and tangent
+	float3 unnormalizedNormalWS = normalWS;
+	float renormFactor = 1.0 / length(unnormalizedNormalWS);
+
+	// bitangent on the fly option in xnormal to reduce vertex shader outputs.
+	// this is the mikktspace transformation (must use unnormalized attributes)
+	float3x3 worldToTangent = CreateWorldToTangent(unnormalizedNormalWS, tangentWS.xyz, tangentWS.w > 0.0 ? 1.0 : -1.0);
+
+	// surface gradient based formulation requires a unit length initial normal. We can maintain compliance with mikkts
+	// by uniformly scaling all 3 vectors since normalization of the perturbed normal will cancel it.
+	worldToTangent[0] = worldToTangent[0] * renormFactor;
+	worldToTangent[1] = worldToTangent[1] * renormFactor;
+	worldToTangent[2] = worldToTangent[2] * renormFactor;		// normalizes the interpolated vertex normal
+
+	return worldToTangent;
+}
+
+FragInputs UnpackVaryingsMeshToFragInputs1(PackedVaryingsMeshToPS input)
+{
+	FragInputs output;
+	ZERO_INITIALIZE(FragInputs, output);
+
+	UNITY_SETUP_INSTANCE_ID(input);
+
+	// Init to some default value to make the computer quiet (else it output "divide by zero" warning even if value is not used).
+	// TODO: this is a really poor workaround, but the variable is used in a bunch of places
+	// to compute normals which are then passed on elsewhere to compute other values...
+	output.worldToTangent = k_identity3x3;
+
+	output.positionSS = input.positionCS; // input.positionCS is SV_Position
+
+#ifdef VARYINGS_NEED_POSITION_WS
+	output.positionRWS.xyz = input.interpolators0.xyz;
+#endif
+
+#ifdef VARYINGS_NEED_TANGENT_TO_WORLD
+	float4 tangentWS = float4(input.interpolators2.xyz, input.interpolators2.w > 0.0 ? 1.0 : -1.0); // must not be normalized (mikkts requirement)
+	output.worldToTangent = BuildWorldToTangent1(tangentWS, input.interpolators1.xyz);
+#endif // VARYINGS_NEED_TANGENT_TO_WORLD
+
+#ifdef VARYINGS_NEED_TEXCOORD0
+	output.texCoord0.xy = input.interpolators3.xy;
+#endif
+#ifdef VARYINGS_NEED_TEXCOORD1
+	output.texCoord1.xy = input.interpolators3.zw;
+#endif
+#ifdef VARYINGS_NEED_TEXCOORD2
+	output.texCoord2.xy = input.interpolators4.xy;
+#endif
+#ifdef VARYINGS_NEED_TEXCOORD3
+	output.texCoord3.xy = input.interpolators4.zw;
+#endif
+#ifdef VARYINGS_NEED_COLOR
+	output.color = input.interpolators5;
+#endif
+
+#if defined(VARYINGS_NEED_CULLFACE) && SHADER_STAGE_FRAGMENT
+	output.isFrontFace = IS_FRONT_VFACE(input.cullFace, true, false);
+#endif
+
+	return output;
+}
+
 void Frag(PackedVaryingsToPS packedInput,
         #ifdef OUTPUT_SPLIT_LIGHTING
             out float4 outColor : SV_Target0,  // outSpecularLighting
@@ -463,7 +634,7 @@ void Frag(PackedVaryingsToPS packedInput,
           )
 {
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(packedInput);
-    FragInputs input = UnpackVaryingsMeshToFragInputs(packedInput.vmesh);
+    FragInputs input = UnpackVaryingsMeshToFragInputs1(packedInput.vmesh);
 
     uint2 tileIndex = uint2(input.positionSS.xy) / GetTileSize();
 #if defined(UNITY_SINGLE_PASS_STEREO)
@@ -539,8 +710,9 @@ void Frag(PackedVaryingsToPS packedInput,
         float3 diffuseLighting;
         float3 specularLighting;
 
-        LightLoop(V, posInput, preLightData, bsdfData, builtinData, featureFlags, diffuseLighting, specularLighting);
-
+        LightLoop1(V, posInput, preLightData, bsdfData, builtinData, featureFlags, diffuseLighting, specularLighting);
+		//outColor = float4(diffuseLighting, 1);
+		//return;
         diffuseLighting *= GetCurrentExposureMultiplier();
         specularLighting *= GetCurrentExposureMultiplier();
 
