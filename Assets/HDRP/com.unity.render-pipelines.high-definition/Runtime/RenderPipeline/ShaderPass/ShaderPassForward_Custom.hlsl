@@ -126,16 +126,174 @@ PackedVaryingsToPS VertTesselation(VaryingsToDS input)
 #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/TessellationShare.hlsl"
 #endif
 
+// For image based lighting, a part of the BSDF is pre-integrated.
+// This is done both for specular GGX height-correlated and DisneyDiffuse
+// reflectivity is  Integral{(BSDF_GGX / F) - use for multiscattering
+void GetPreIntegratedFGDGGXAndDisneyDiffuse1(FragInputs input, float NdotV, float perceptualRoughness, float3 fresnel0, out float3 specularFGD, out float diffuseFGD, out float reflectivity)
+{
+	// We want the LUT to contain the entire [0, 1] range, without losing half a texel at each side.
+	float2 coordLUT = Remap01ToHalfTexelCoord(float2(sqrt(NdotV), perceptualRoughness), FGDTEXTURE_RESOLUTION);
+	
+	float3 preFGD = SAMPLE_TEXTURE2D_LOD(_PreIntegratedFGD_GGXDisneyDiffuse, s_linear_clamp_sampler, coordLUT, 0).xyz;
+//	float3 preFGD = SAMPLE_TEXTURE2D_LOD(_PreIntegratedFGD_GGXDisneyDiffuse, s_linear_clamp_sampler, input.texCoord0, 0).xyz;
+
+	// Pre-integrate GGX FGD
+	// Integral{BSDF * <N,L> dw} =
+	// Integral{(F0 + (1 - F0) * (1 - <V,H>)^5) * (BSDF / F) * <N,L> dw} =
+	// (1 - F0) * Integral{(1 - <V,H>)^5 * (BSDF / F) * <N,L> dw} + F0 * Integral{(BSDF / F) * <N,L> dw}=
+	// (1 - F0) * x + F0 * y = lerp(x, y, F0)
+	specularFGD = lerp(preFGD.xxx, preFGD.yyy, fresnel0);
+
+	// Pre integrate DisneyDiffuse FGD:
+	// z = DisneyDiffuse
+	// Remap from the [0, 1] to the [0.5, 1.5] range.
+	diffuseFGD = preFGD.z + 0.5;
+	reflectivity = preFGD.y;
+}
+
+PreLightData GetPreLightData1(FragInputs input, float3 V, PositionInputs posInput, inout BSDFData bsdfData,float3 normal)
+{
+	PreLightData preLightData;
+	ZERO_INITIALIZE(PreLightData, preLightData);
+
+	float3 N = bsdfData.normalWS;
+	preLightData.NdotV = dot(N, V);
+	preLightData.iblPerceptualRoughness = bsdfData.perceptualRoughness;
+
+	float NdotV = ClampNdotV(preLightData.NdotV);
+
+	// We modify the bsdfData.fresnel0 here for iridescence
+	if (HasFlag(bsdfData.materialFeatures, MATERIALFEATUREFLAGS_LIT_IRIDESCENCE))
+	{
+		float viewAngle = NdotV;
+		float topIor = 1.0; // Default is air
+		if (HasFlag(bsdfData.materialFeatures, MATERIALFEATUREFLAGS_LIT_CLEAR_COAT))
+		{
+			topIor = lerp(1.0, CLEAR_COAT_IOR, bsdfData.coatMask);
+			// HACK: Use the reflected direction to specify the Fresnel coefficient for pre-convolved envmaps
+			viewAngle = sqrt(1.0 + Sq(1.0 / topIor) * (Sq(dot(bsdfData.normalWS, V)) - 1.0));
+		}
+
+		if (bsdfData.iridescenceMask > 0.0)
+		{
+			bsdfData.fresnel0 = lerp(bsdfData.fresnel0, EvalIridescence(topIor, viewAngle, bsdfData.iridescenceThickness, bsdfData.fresnel0), bsdfData.iridescenceMask);
+		}
+	}
+
+	// We modify the bsdfData.fresnel0 here for clearCoat
+	if (HasFlag(bsdfData.materialFeatures, MATERIALFEATUREFLAGS_LIT_CLEAR_COAT))
+	{
+		// Fresnel0 is deduced from interface between air and material (Assume to be 1.5 in Unity, or a metal).
+		// but here we go from clear coat (1.5) to material, we need to update fresnel0
+		// Note: Schlick is a poor approximation of Fresnel when ieta is 1 (1.5 / 1.5), schlick target 1.4 to 2.2 IOR.
+		bsdfData.fresnel0 = lerp(bsdfData.fresnel0, ConvertF0ForAirInterfaceToF0ForClearCoat15(bsdfData.fresnel0), bsdfData.coatMask);
+
+		preLightData.coatPartLambdaV = GetSmithJointGGXPartLambdaV(NdotV, CLEAR_COAT_ROUGHNESS);
+		preLightData.coatIblR = reflect(-V, N);
+		preLightData.coatIblF = F_Schlick(CLEAR_COAT_F0, NdotV) * bsdfData.coatMask;
+	}
+
+	// Handle IBL + area light + multiscattering.
+	// Note: use the not modified by anisotropy iblPerceptualRoughness here.
+	float specularReflectivity;
+	GetPreIntegratedFGDGGXAndDisneyDiffuse1(input, NdotV, preLightData.iblPerceptualRoughness, bsdfData.fresnel0, preLightData.specularFGD, preLightData.diffuseFGD, specularReflectivity);
+#ifdef USE_DIFFUSE_LAMBERT_BRDF
+	preLightData.diffuseFGD = 1.0;
+#endif
+
+#ifdef LIT_USE_GGX_ENERGY_COMPENSATION
+	// Ref: Practical multiple scattering compensation for microfacet models.
+	// We only apply the formulation for metals.
+	// For dielectrics, the change of reflectance is negligible.
+	// We deem the intensity difference of a couple of percent for high values of roughness
+	// to not be worth the cost of another precomputed table.
+	// Note: this formulation bakes the BSDF non-symmetric!
+	preLightData.energyCompensation = 1.0 / specularReflectivity - 1.0;
+#else
+	preLightData.energyCompensation = 0.0;
+#endif // LIT_USE_GGX_ENERGY_COMPENSATION
+
+	float3 iblN;
+
+	// We avoid divergent evaluation of the GGX, as that nearly doubles the cost.
+	// If the tile has anisotropy, all the pixels within the tile are evaluated as anisotropic.
+	if (HasFlag(bsdfData.materialFeatures, MATERIALFEATUREFLAGS_LIT_ANISOTROPY))
+	{
+		float TdotV = dot(bsdfData.tangentWS, V);
+		float BdotV = dot(bsdfData.bitangentWS, V);
+
+		preLightData.partLambdaV = GetSmithJointGGXAnisoPartLambdaV(TdotV, BdotV, NdotV, bsdfData.roughnessT, bsdfData.roughnessB);
+
+		// perceptualRoughness is use as input and output here
+		GetGGXAnisotropicModifiedNormalAndRoughness(bsdfData.bitangentWS, bsdfData.tangentWS, N, V, bsdfData.anisotropy, preLightData.iblPerceptualRoughness, iblN, preLightData.iblPerceptualRoughness);
+	}
+	else
+	{
+		preLightData.partLambdaV = GetSmithJointGGXPartLambdaV(NdotV, bsdfData.roughnessT);
+		iblN = N;
+	}
+
+	preLightData.iblR = reflect(-V, iblN);
+
+	// Area light
+	// UVs for sampling the LUTs
+	float theta = FastACosPos(NdotV); // For Area light - UVs for sampling the LUTs
+	float2 uv = Remap01ToHalfTexelCoord(float2(bsdfData.perceptualRoughness, theta * INV_HALF_PI), LTC_LUT_SIZE);
+
+	// Note we load the matrix transpose (avoid to have to transpose it in shader)
+#ifdef USE_DIFFUSE_LAMBERT_BRDF
+	preLightData.ltcTransformDiffuse = k_identity3x3;
+#else
+	// Get the inverse LTC matrix for Disney Diffuse
+	preLightData.ltcTransformDiffuse = 0.0;
+	preLightData.ltcTransformDiffuse._m22 = 1.0;
+	preLightData.ltcTransformDiffuse._m00_m02_m11_m20 = SAMPLE_TEXTURE2D_ARRAY_LOD(_LtcData, s_linear_clamp_sampler, uv, LTC_DISNEY_DIFFUSE_MATRIX_INDEX, 0);
+#endif
+
+	// Get the inverse LTC matrix for GGX
+	// Note we load the matrix transpose (avoid to have to transpose it in shader)
+	preLightData.ltcTransformSpecular = 0.0;
+	preLightData.ltcTransformSpecular._m22 = 1.0;
+	preLightData.ltcTransformSpecular._m00_m02_m11_m20 = SAMPLE_TEXTURE2D_ARRAY_LOD(_LtcData, s_linear_clamp_sampler, uv, LTC_GGX_MATRIX_INDEX, 0);
+
+	// Construct a right-handed view-dependent orthogonal basis around the normal
+	preLightData.orthoBasisViewNormal = GetOrthoBasisViewNormal(V, N, preLightData.NdotV);
+
+	preLightData.ltcTransformCoat = 0.0;
+	if (HasFlag(bsdfData.materialFeatures, MATERIALFEATUREFLAGS_LIT_CLEAR_COAT))
+	{
+		float2 uv = LTC_LUT_OFFSET + LTC_LUT_SCALE * float2(CLEAR_COAT_PERCEPTUAL_ROUGHNESS, theta * INV_HALF_PI);
+
+		// Get the inverse LTC matrix for GGX
+		// Note we load the matrix transpose (avoid to have to transpose it in shader)
+		preLightData.ltcTransformCoat._m22 = 1.0;
+		preLightData.ltcTransformCoat._m00_m02_m11_m20 = SAMPLE_TEXTURE2D_ARRAY_LOD(_LtcData, s_linear_clamp_sampler, uv, LTC_GGX_MATRIX_INDEX, 0);
+	}
+
+	// refraction (forward only)
+#if HAS_REFRACTION
+	RefractionModelResult refraction = REFRACTION_MODEL(V, posInput, bsdfData);
+	preLightData.transparentRefractV = refraction.rayWS;
+	preLightData.transparentPositionWS = refraction.positionWS;
+	preLightData.transparentTransmittance = exp(-bsdfData.absorptionCoefficient * refraction.dist);
+	// Empirical remap to try to match a bit the refraction probe blurring for the fallback
+	// Use IblPerceptualRoughness so we can handle approx of clear coat.
+	preLightData.transparentSSMipLevel = PositivePow(preLightData.iblPerceptualRoughness, 1.3) * uint(max(_ColorPyramidScale.z - 1, 0));
+#endif
+
+	return preLightData;
+}
+
 // This function allow to modify the content of (back) baked diffuse lighting when we gather builtinData
 // This is use to apply lighting model specific code, like pre-integration, transmission etc...
 // It is up to the lighting model implementer to chose if the modification are apply here or in PostEvaluateBSDF
-void ModifyBakedDiffuseLighting1(float3 V, PositionInputs posInput, SurfaceData surfaceData, inout BuiltinData builtinData)
+void ModifyBakedDiffuseLighting1(FragInputs input, float3 V, PositionInputs posInput, SurfaceData surfaceData, inout BuiltinData builtinData)
 {
 	// In case of deferred, all lighting model operation are done before storage in GBuffer, as we store emissive with bakeDiffuseLighting
 
 	// To get the data we need to do the whole process - compiler should optimize everything
 	BSDFData bsdfData = ConvertSurfaceDataToBSDFData(posInput.positionSS, surfaceData);
-	PreLightData preLightData = GetPreLightData(V, posInput, bsdfData);
+	PreLightData preLightData = GetPreLightData1(input,V, posInput, bsdfData, surfaceData.normalWS);
 
 	// Add GI transmission contribution to bakeDiffuseLighting, we then drop backBakeDiffuseLighting (i.e it is not used anymore, this save VGPR in forward and in deferred we can't store it anyway)
 	if (HasFlag(bsdfData.materialFeatures, MATERIALFEATUREFLAGS_LIT_TRANSMISSION))
@@ -153,11 +311,10 @@ void ModifyBakedDiffuseLighting1(float3 V, PositionInputs posInput, SurfaceData 
 	// Note: When baking reflection probes, we approximate the diffuse with the fresnel0
 	builtinData.bakeDiffuseLighting *= ReplaceDiffuseForReflectionPass(bsdfData.fresnel0)
 		? bsdfData.fresnel0 : preLightData.diffuseFGD * bsdfData.diffuseColor;
-
 }
 
 // InitBuiltinData must be call before calling PostInitBuiltinData
-void PostInitBuiltinData1(float3 V, PositionInputs posInput, SurfaceData surfaceData,
+void PostInitBuiltinData1(FragInputs input, float3 V, PositionInputs posInput, SurfaceData surfaceData,
 	inout BuiltinData builtinData)
 {
 	// Apply control from the indirect lighting volume settings - This is apply here so we don't affect emissive
@@ -165,7 +322,7 @@ void PostInitBuiltinData1(float3 V, PositionInputs posInput, SurfaceData surface
 	builtinData.bakeDiffuseLighting *= _IndirectLightingMultiplier.x;
 	builtinData.backBakeDiffuseLighting *= _IndirectLightingMultiplier.x;
 #ifdef MODIFY_BAKED_DIFFUSE_LIGHTING
-	ModifyBakedDiffuseLighting1(V, posInput, surfaceData, builtinData);
+	ModifyBakedDiffuseLighting1(input,V, posInput, surfaceData, builtinData);
 #endif
 	ApplyDebugToBuiltinData(builtinData);
 }
@@ -414,7 +571,7 @@ void GetBuiltinData1(FragInputs input, float3 V, inout PositionInputs posInput, 
 
 	builtinData.depthOffset = depthOffset;
 
-	PostInitBuiltinData1(V, posInput, surfaceData, builtinData);
+	PostInitBuiltinData1(input,V, posInput, surfaceData, builtinData);
 }
 
 real3 SurfaceGradientResolveNormal1(real3 nrmVertexNormal, real3 surfGrad)
@@ -454,6 +611,11 @@ void GetNormalWS1(FragInputs input, float3 normalTS, out float3 normalWS, float3
 	normalWS = normalize(TransformTangentToWorld1(normalTS, input.worldToTangent));
 
 #endif // SURFACE_GRADIENT
+
+#if INV_WS_NORMAL_Z
+	normalWS.z *= -1;
+#endif
+
 }
 
 
@@ -636,6 +798,9 @@ void Frag(PackedVaryingsToPS packedInput,
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(packedInput);
     FragInputs input = UnpackVaryingsMeshToFragInputs1(packedInput.vmesh);
 
+	//outColor = SAMPLE_TEXTURE2D(_PreIntegratedFGD_GGXDisneyDiffuse, s_linear_clamp_sampler,input.texCoord0);
+	//outColor = float4(outColor.z, outColor.z, outColor.z, 1);
+	//return;
     uint2 tileIndex = uint2(input.positionSS.xy) / GetTileSize();
 #if defined(UNITY_SINGLE_PASS_STEREO)
     tileIndex.x -= unity_StereoEyeIndex * _NumTileClusteredX;
@@ -711,8 +876,8 @@ void Frag(PackedVaryingsToPS packedInput,
         float3 specularLighting;
 
         LightLoop1(V, posInput, preLightData, bsdfData, builtinData, featureFlags, diffuseLighting, specularLighting);
-		//outColor = float4(diffuseLighting, 1);
-		//return;
+		outColor = float4(diffuseLighting, 1);
+		return;
         diffuseLighting *= GetCurrentExposureMultiplier();
         specularLighting *= GetCurrentExposureMultiplier();
 

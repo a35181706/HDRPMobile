@@ -995,6 +995,7 @@ struct PreLightData
 #endif
 };
 
+
 PreLightData GetPreLightData(float3 V, PositionInputs posInput, inout BSDFData bsdfData)
 {
     PreLightData preLightData;

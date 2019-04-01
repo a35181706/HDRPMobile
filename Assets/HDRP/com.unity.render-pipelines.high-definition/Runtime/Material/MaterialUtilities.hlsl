@@ -37,5 +37,9 @@ void GetNormalWS(FragInputs input, float3 normalTS, out float3 normalWS, float3 
     // We need to normalize as we use mikkt tangent space and this is expected (tangent space is not normalize)
     normalWS = normalize(TransformTangentToWorld(normalTS, input.worldToTangent));
 
+#if INV_WS_NORMAL_Z
+	normalWS.z *= -1;
+#endif
+
 #endif // SURFACE_GRADIENT
 }
