@@ -1,12 +1,223 @@
 #include "Assets/HDRP/com.unity.render-pipelines.core/ShaderLibrary/Macros.hlsl"
+//-----------------------------------------------------------------------------
+// PostEvaluateBSDF
+// ----------------------------------------------------------------------------
+void PostEvaluateBSDF1(LightLoopContext lightLoopContext,
+	float3 V, PositionInputs posInput,
+	PreLightData preLightData, BSDFData bsdfData, BuiltinData builtinData, AggregateLighting lighting,
+	out float3 diffuseLighting, out float3 specularLighting)
+{
+	AmbientOcclusionFactor aoFactor;
+	// Use GTAOMultiBounce approximation for ambient occlusion (allow to get a tint from the baseColor)
+#if 0
+	GetScreenSpaceAmbientOcclusion(posInput.positionSS, preLightData.NdotV, bsdfData.perceptualRoughness, bsdfData.ambientOcclusion, bsdfData.specularOcclusion, aoFactor);
+#else
+	GetScreenSpaceAmbientOcclusionMultibounce(posInput.positionSS, preLightData.NdotV, bsdfData.perceptualRoughness, bsdfData.ambientOcclusion, bsdfData.specularOcclusion, bsdfData.diffuseColor, bsdfData.fresnel0, aoFactor);
+#endif
+	ApplyAmbientOcclusionFactor(aoFactor, builtinData, lighting);
+
+	// Subsurface scattering mode
+	float3 modifiedDiffuseColor = GetModifiedDiffuseColorForSSS(bsdfData);
+
+	// Apply the albedo to the direct diffuse lighting (only once). The indirect (baked)
+	// diffuse lighting has already multiply the albedo in ModifyBakedDiffuseLighting().
+	// Note: In deferred bakeDiffuseLighting also contain emissive and in this case emissiveColor is 0
+
+	diffuseLighting = modifiedDiffuseColor * lighting.direct.diffuse + builtinData.bakeDiffuseLighting + builtinData.emissiveColor;
+
+	// If refraction is enable we use the transmittanceMask to lerp between current diffuse lighting and refraction value
+	// Physically speaking, transmittanceMask should be 1, but for artistic reasons, we let the value vary
+	//
+	// Note we also transfer the refracted light (lighting.indirect.specularTransmitted) into diffuseLighting
+	// since we know it won't be further processed: it is called at the end of the LightLoop(), but doing this
+	// enables opacity to affect it (in ApplyBlendMode()) while the rest of specularLighting escapes it.
+#if HAS_REFRACTION
+	diffuseLighting = lerp(diffuseLighting, lighting.indirect.specularTransmitted, bsdfData.transmittanceMask * _EnableSSRefraction);
+#endif
+
+	specularLighting = lighting.direct.specular + lighting.indirect.specularReflected;
+	// Rescale the GGX to account for the multiple scattering.
+	specularLighting *= 1.0 + bsdfData.fresnel0 * preLightData.energyCompensation;
+
+#ifdef DEBUG_DISPLAY
+	PostEvaluateBSDFDebugDisplay(aoFactor, builtinData, lighting, bsdfData.diffuseColor, diffuseLighting, specularLighting);
+#endif
+}
 
 // We perform scalarization only for forward rendering as for deferred loads will already be scalar since tiles will match waves and therefore all threads will read from the same tile. 
 // More info on scalarization: https://flashypixels.wordpress.com/2018/11/10/intro-to-gpu-scalarization-part-2-scalarize-all-the-lights/
 #define SCALARIZE_LIGHT_LOOP (defined(SUPPORTS_WAVE_INTRINSICS) && !defined(LIGHTLOOP_DISABLE_TILE_AND_CLUSTER) && SHADERPASS == SHADERPASS_FORWARD)
 
+DirectLighting ShadeSurface_Punctual1(LightLoopContext lightLoopContext,
+	PositionInputs posInput, BuiltinData builtinData,
+	PreLightData preLightData, LightData light,
+	BSDFData bsdfData, float3 N, float3 V)
+{
+
+	DirectLighting lighting;
+	ZERO_INITIALIZE(DirectLighting, lighting);
+
+	float3 L;
+	float3 lightToSample;
+	float4 distances; // {d, d^2, 1/d, d_proj}
+	GetPunctualLightVectors(posInput.positionWS, light, L, lightToSample, distances);
+
+	float NdotL = dot(N, L); // Do not saturate
+
+	// Note: We use NdotL here to early out, but in case of clear coat this is not correct. But we are OK with this
+	bool surfaceReflection = NdotL > 0;
+
+	// Caution: this function modifies N, NdotL, shadowIndex, contactShadowIndex and shadowMaskSelector.
+	float3 transmittance = PreEvaluatePunctualLightTransmission(lightLoopContext, posInput, bsdfData,
+		light, distances.x, N, L, NdotL);
+	float3 color; float attenuation;
+	EvaluateLight_Punctual(lightLoopContext, posInput, light, builtinData, N, L, NdotL, lightToSample, distances,
+		color, attenuation);
+
+	// TODO: transmittance contributes to attenuation, how can we use it for early-out?
+	if (attenuation > 0)
+	{
+		// Simulate a sphere/disk light with this hack
+		// Note that it is not correct with our pre-computation of PartLambdaV (mean if we disable the optimization we will not have the
+		// same result) but we don't care as it is a hack anyway
+		ClampRoughness(bsdfData, light.minRoughness);
+
+		float3 diffuseBsdf, specularBsdf;
+		BSDF(V, L, NdotL, posInput.positionWS, preLightData, bsdfData, diffuseBsdf, specularBsdf);
+
+		if (surfaceReflection)
+		{
+			float intensity = attenuation * NdotL;
+		
+			lighting.diffuse = diffuseBsdf * (intensity * light.diffuseDimmer);
+			lighting.specular = specularBsdf * (intensity * light.specularDimmer);
+		}
+		else if (MaterialSupportsTransmission(bsdfData))
+		{
+			// Apply wrapped lighting to better handle thin objects at grazing angles.
+			float wrapNdotL = ComputeWrappedDiffuseLighting(NdotL, TRANSMISSION_WRAP_LIGHT);
+			float intensity = attenuation * wrapNdotL;
+
+			// We use diffuse lighting for accumulation since it is going to be blurred during the SSS pass.
+			// Note: Disney's LdoV term in 'diffuseBsdf' does not hold a meaningful value
+			// in the context of transmission, but we keep it unaltered for performance reasons.
+			lighting.diffuse = transmittance * (diffuseBsdf * (intensity * light.diffuseDimmer));
+			lighting.specular = 0; // No spec trans, the compiler should optimize
+		}
+
+		// Save ALU by applying light and cookie colors only once.
+		lighting.diffuse *=  color;
+		lighting.specular *= color;
+		
+	}
+	
+#ifdef DEBUG_DISPLAY
+	if (_DebugLightingMode == DEBUGLIGHTINGMODE_LUX_METER)
+	{
+		// Only lighting, not BSDF
+		lighting.diffuse = color * attenuation * saturate(NdotL);
+	}
+#endif
+	
+	return lighting;
+}
+
 //-----------------------------------------------------------------------------
-// LightLoop
-// ----------------------------------------------------------------------------
+// EvaluateBSDF_Punctual (supports spot, point and projector lights)
+//-----------------------------------------------------------------------------
+
+DirectLighting EvaluateBSDF_Punctual1(LightLoopContext lightLoopContext,
+	float3 V, PositionInputs posInput,
+	PreLightData preLightData, LightData lightData, BSDFData bsdfData, BuiltinData builtinData)
+{
+	return ShadeSurface_Punctual1(lightLoopContext, posInput, builtinData, preLightData, lightData,
+		bsdfData, bsdfData.normalWS, V);
+}
+
+DirectLighting ShadeSurface_Directional1(LightLoopContext lightLoopContext,
+	PositionInputs posInput, BuiltinData builtinData,
+	PreLightData preLightData, DirectionalLightData light,
+	BSDFData bsdfData, float3 N, float3 V)
+{
+	DirectLighting lighting;
+	ZERO_INITIALIZE(DirectLighting, lighting);
+
+	float3 L = ComputeSunLightDirection(light, N, V);
+	float  NdotL = dot(N, L); // Do not saturate
+
+	// Note: We use NdotL here to early out, but in case of clear coat this is not correct. But we are OK with this
+	bool surfaceReflection = NdotL > 0;
+
+	// Caution: this function modifies N, NdotL, contactShadowIndex and shadowMaskSelector.
+	float3 transmittance = PreEvaluateDirectionalLightTransmission(bsdfData, light, N, NdotL);
+
+	float3 color; float attenuation;
+	EvaluateLight_Directional(lightLoopContext, posInput, light, builtinData, N, L, NdotL,
+		color, attenuation);
+
+	// TODO: transmittance contributes to attenuation, how can we use it for early-out?
+	if (attenuation > 0)
+	{
+		// We must clamp here, otherwise our disk light hack for smooth surfaces does not work.
+		// Explanation: for a perfectly smooth surface, lighting is only reflected if (NdotL = NdotV).
+		// This implies that (NdotH = 1).
+		// Due to the floating point arithmetic (see math in ComputeSunLightDirection() and
+		// GetBSDFAngle()), we will never arrive at this exact number, so no lighting will be reflected.
+		// If we increase the roughness somewhat, the trick still works.
+		ClampRoughness(bsdfData, light.minRoughness);
+
+		float3 diffuseBsdf, specularBsdf;
+		BSDF(V, L, NdotL, posInput.positionWS, preLightData, bsdfData, diffuseBsdf, specularBsdf);
+
+		if (surfaceReflection)
+		{
+			attenuation *= ComputeMicroShadowing(bsdfData, NdotL);
+			float intensity = attenuation * NdotL;
+
+			lighting.diffuse = diffuseBsdf * (intensity * light.diffuseDimmer);
+			lighting.specular = specularBsdf * (intensity * light.specularDimmer);
+		}
+		else if (MaterialSupportsTransmission(bsdfData))
+		{
+			// Apply wrapped lighting to better handle thin objects at grazing angles.
+			float wrapNdotL = ComputeWrappedDiffuseLighting(NdotL, TRANSMISSION_WRAP_LIGHT);
+			float intensity = attenuation * wrapNdotL;
+
+			// We use diffuse lighting for accumulation since it is going to be blurred during the SSS pass.
+			// Note: Disney's LdoV term in 'diffuseBsdf' does not hold a meaningful value
+			// in the context of transmission, but we keep it unaltered for performance reasons.
+			lighting.diffuse = transmittance * (diffuseBsdf * (intensity * light.diffuseDimmer));
+			lighting.specular = 0; // No spec trans, the compiler should optimize
+		}
+
+		// Save ALU by applying light and cookie colors only once.
+		lighting.diffuse *= color;
+		lighting.specular *= color;
+	}
+
+#ifdef DEBUG_DISPLAY
+	if (_DebugLightingMode == DEBUGLIGHTINGMODE_LUX_METER)
+	{
+		// Only lighting, not BSDF
+		lighting.diffuse = color * attenuation * saturate(NdotL);
+	}
+#endif
+
+	return lighting;
+}
+
+//-----------------------------------------------------------------------------
+// EvaluateBSDF_Directional
+//-----------------------------------------------------------------------------
+
+DirectLighting EvaluateBSDF_Directional1(LightLoopContext lightLoopContext,
+	float3 V, PositionInputs posInput, PreLightData preLightData,
+	DirectionalLightData lightData, BSDFData bsdfData,
+	BuiltinData builtinData)
+{
+	return ShadeSurface_Directional1(lightLoopContext, posInput, builtinData, preLightData, lightData,
+		bsdfData, bsdfData.normalWS, V);
+}
 
 void ApplyDebug(LightLoopContext lightLoopContext, PositionInputs posInput, BSDFData bsdfData, inout float3 diffuseLighting, inout float3 specularLighting)
 {
@@ -133,7 +344,7 @@ void LightLoop1(float3 V, PositionInputs posInput, PreLightData preLightData, BS
 		{
 			if (IsMatchingLightLayer(_DirectionalLightDatas[i].lightLayers, builtinData.renderingLayers))
 			{
-				DirectLighting lighting = EvaluateBSDF_Directional(context, V, posInput, preLightData, _DirectionalLightDatas[i], bsdfData, builtinData);
+				DirectLighting lighting = EvaluateBSDF_Directional1(context, V, posInput, preLightData, _DirectionalLightDatas[i], bsdfData, builtinData);
 				AccumulateDirectLighting(lighting, aggregateLighting);
 			}
 		}
@@ -203,13 +414,16 @@ void LightLoop1(float3 V, PositionInputs posInput, PreLightData preLightData, BS
 				v_lightListOffset++;
 				if (IsMatchingLightLayer(s_lightData.lightLayers, builtinData.renderingLayers))
 				{
-					DirectLighting lighting = EvaluateBSDF_Punctual(context, V, posInput, preLightData, s_lightData, bsdfData, builtinData);
+					DirectLighting lighting = EvaluateBSDF_Punctual1(context, V, posInput, preLightData, s_lightData, bsdfData, builtinData);
 					AccumulateDirectLighting(lighting, aggregateLighting);
+
 				}
 			}
+			//aggregateLighting.direct.diffuse = 1;
 		}
+
 	}
-//
+
 //	if (featureFlags & LIGHTFEATUREFLAGS_AREA)
 //	{
 //		uint lightCount, lightStart;
@@ -261,17 +475,17 @@ void LightLoop1(float3 V, PositionInputs posInput, PreLightData preLightData, BS
 //			}
 //		}
 //	}
-
-	// Define macro for a better understanding of the loop
-	// TODO: this code is now much harder to understand...
-#define EVALUATE_BSDF_ENV_SKY(envLightData, TYPE, type) \
-        IndirectLighting lighting = EvaluateBSDF_Env(context, V, posInput, preLightData, envLightData, bsdfData, envLightData.influenceShapeType, MERGE_NAME(GPUIMAGEBASEDLIGHTINGTYPE_, TYPE), MERGE_NAME(type, HierarchyWeight)); \
-        AccumulateIndirectLighting(lighting, aggregateLighting);
-
-// Environment cubemap test lightlayers, sky don't test it
-#define EVALUATE_BSDF_ENV(envLightData, TYPE, type) if (IsMatchingLightLayer(envLightData.lightLayers, builtinData.renderingLayers)) { EVALUATE_BSDF_ENV_SKY(envLightData, TYPE, type) }
-
-	// First loop iteration
+//
+//	// Define macro for a better understanding of the loop
+//	// TODO: this code is now much harder to understand...
+//#define EVALUATE_BSDF_ENV_SKY(envLightData, TYPE, type) \
+//        IndirectLighting lighting = EvaluateBSDF_Env(context, V, posInput, preLightData, envLightData, bsdfData, envLightData.influenceShapeType, MERGE_NAME(GPUIMAGEBASEDLIGHTINGTYPE_, TYPE), MERGE_NAME(type, HierarchyWeight)); \
+//        AccumulateIndirectLighting1(lighting, aggregateLighting);
+//
+//// Environment cubemap test lightlayers, sky don't test it
+//#define EVALUATE_BSDF_ENV(envLightData, TYPE, type) if (IsMatchingLightLayer(envLightData.lightLayers, builtinData.renderingLayers)) { EVALUATE_BSDF_ENV_SKY(envLightData, TYPE, type) }
+//
+//	// First loop iteration
 //	if (featureFlags & (LIGHTFEATUREFLAGS_ENV | LIGHTFEATUREFLAGS_SKY | LIGHTFEATUREFLAGS_SSREFRACTION | LIGHTFEATUREFLAGS_SSREFLECTION))
 //	{
 //		float reflectionHierarchyWeight = 0.0; // Max: 1.0
@@ -414,7 +628,7 @@ void LightLoop1(float3 V, PositionInputs posInput, PreLightData preLightData, BS
 
 	// Also Apply indiret diffuse (GI)
 	// PostEvaluateBSDF will perform any operation wanted by the material and sum everything into diffuseLighting and specularLighting
-	PostEvaluateBSDF(context, V, posInput, preLightData, bsdfData, builtinData, aggregateLighting,
+	PostEvaluateBSDF1(context, V, posInput, preLightData, bsdfData, builtinData, aggregateLighting,
 		diffuseLighting, specularLighting);
 
 	ApplyDebug(context, posInput, bsdfData, diffuseLighting, specularLighting);

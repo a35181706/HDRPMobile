@@ -157,5 +157,6 @@
 #define GATHER_ALPHA_TEXTURE2D(textureName, samplerName, coord2)          textureName.GatherAlpha(samplerName, coord2)
 
 #if SHADER_API_MOBILE
-#define INV_WS_NORMAL_Z 1
+#define FLIP_N_DOT_V 1
+#define FLIP_NORMAL_Z 1
 #endif

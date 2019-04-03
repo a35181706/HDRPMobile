@@ -132,6 +132,11 @@ PackedVaryingsToPS VertTesselation(VaryingsToDS input)
 void GetPreIntegratedFGDGGXAndDisneyDiffuse1(FragInputs input, float NdotV, float perceptualRoughness, float3 fresnel0, out float3 specularFGD, out float diffuseFGD, out float reflectivity)
 {
 	// We want the LUT to contain the entire [0, 1] range, without losing half a texel at each side.
+
+#if FLIP_N_DOT_V
+	NdotV = -NdotV;
+#endif
+
 	float2 coordLUT = Remap01ToHalfTexelCoord(float2(sqrt(NdotV), perceptualRoughness), FGDTEXTURE_RESOLUTION);
 	
 	float3 preFGD = SAMPLE_TEXTURE2D_LOD(_PreIntegratedFGD_GGXDisneyDiffuse, s_linear_clamp_sampler, coordLUT, 0).xyz;
@@ -612,10 +617,6 @@ void GetNormalWS1(FragInputs input, float3 normalTS, out float3 normalWS, float3
 
 #endif // SURFACE_GRADIENT
 
-#if INV_WS_NORMAL_Z
-	normalWS.z *= -1;
-#endif
-
 }
 
 
@@ -819,8 +820,8 @@ void Frag(PackedVaryingsToPS packedInput,
     SurfaceData surfaceData;
     BuiltinData builtinData;
     GetSurfaceAndBuiltinData1(input, V, posInput, surfaceData, builtinData);
-	outColor = float4(builtinData.bakeDiffuseLighting,1);
-	return;
+	//outColor = float4(builtinData.bakeDiffuseLighting,1);
+	//return;
     BSDFData bsdfData = ConvertSurfaceDataToBSDFData(input.positionSS.xy, surfaceData);
 
     PreLightData preLightData = GetPreLightData(V, posInput, bsdfData);
@@ -872,11 +873,12 @@ void Frag(PackedVaryingsToPS packedInput,
 #else
         uint featureFlags = LIGHT_FEATURE_MASK_FLAGS_OPAQUE;
 #endif
-        float3 diffuseLighting;
-        float3 specularLighting;
+   
+		float3 diffuseLighting;
+		float3 specularLighting;
 
         LightLoop1(V, posInput, preLightData, bsdfData, builtinData, featureFlags, diffuseLighting, specularLighting);
-		outColor = float4(diffuseLighting, 1);
+		outColor = float4(diffuseLighting, 1) ;
 		return;
         diffuseLighting *= GetCurrentExposureMultiplier();
         specularLighting *= GetCurrentExposureMultiplier();
