@@ -809,7 +809,6 @@ void Frag(PackedVaryingsToPS packedInput,
 
     // input.positionSS is SV_Position
     PositionInputs posInput = GetPositionInput_Stereo(input.positionSS.xy, _ScreenSize.zw, input.positionSS.z, input.positionSS.w, input.positionRWS.xyz, tileIndex, unity_StereoEyeIndex);
-
 #ifdef VARYINGS_NEED_POSITION_WS
     float3 V = GetWorldSpaceNormalizeViewDir(input.positionRWS);
 #else
@@ -871,15 +870,13 @@ void Frag(PackedVaryingsToPS packedInput,
 #ifdef _SURFACE_TYPE_TRANSPARENT
         uint featureFlags = LIGHT_FEATURE_MASK_FLAGS_TRANSPARENT;
 #else
-        uint featureFlags = LIGHT_FEATURE_MASK_FLAGS_OPAQUE;
+		uint featureFlags = LIGHT_FEATURE_MASK_FLAGS_OPAQUE;
 #endif
    
 		float3 diffuseLighting;
 		float3 specularLighting;
 
         LightLoop1(V, posInput, preLightData, bsdfData, builtinData, featureFlags, diffuseLighting, specularLighting);
-		outColor = float4(diffuseLighting, 1) ;
-		return;
         diffuseLighting *= GetCurrentExposureMultiplier();
         specularLighting *= GetCurrentExposureMultiplier();
 

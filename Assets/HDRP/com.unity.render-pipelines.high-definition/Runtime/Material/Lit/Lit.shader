@@ -746,7 +746,6 @@ Shader "HDRP/Lit"
 
             #define HAS_LIGHTLOOP
 
-
             #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoopDef.hlsl"
             #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/Lit_Custom.hlsl"
             #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoop_Custom.hlsl"
@@ -760,6 +759,7 @@ Shader "HDRP/Lit"
 
             ENDHLSL
         }
+
 
         Pass
         {

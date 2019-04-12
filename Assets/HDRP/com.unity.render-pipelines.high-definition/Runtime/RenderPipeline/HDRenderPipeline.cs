@@ -2795,7 +2795,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 }
                 else
                 {
-                    //m_LightLoop.RenderForward(camera, cmd, pass == ForwardPass.Opaque);
+                    m_LightLoop.RenderForward(camera, cmd, pass == ForwardPass.Opaque);
 
                     if (pass == ForwardPass.Opaque)
                     {

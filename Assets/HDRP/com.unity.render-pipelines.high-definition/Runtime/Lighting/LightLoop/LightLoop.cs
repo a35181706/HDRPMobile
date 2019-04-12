@@ -848,9 +848,33 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             const int capacityUShortsPerTile = 32;
             const int dwordsPerTile = (capacityUShortsPerTile + 1) >> 1;        // room for 31 lights and a nrLights value.
 
+            List<uint> initialzeData = new List<uint>();
+
+
             s_LightList = new ComputeBuffer((int)LightCategory.Count * dwordsPerTile * nrTiles, sizeof(uint));       // enough list memory for a 4k x 4k display
+            initialzeData.Clear();
+            for (int i = 0; i < (int)LightCategory.Count * dwordsPerTile * nrTiles; i++)
+            {
+                initialzeData.Add(0);
+            }
+            s_LightList.SetData(initialzeData);
+
             s_TileList = new ComputeBuffer((int)LightDefinitions.s_NumFeatureVariants * nrTiles, sizeof(uint));
+            initialzeData.Clear();
+            for (int i = 0; i < (int)LightDefinitions.s_NumFeatureVariants * nrTiles; i++)
+            {
+                initialzeData.Add(0);
+            }
+            s_TileList.SetData(initialzeData);
+
             s_TileFeatureFlags = new ComputeBuffer(nrTiles, sizeof(uint));
+            initialzeData.Clear();
+            for (int i = 0; i < nrTiles; i++)
+            {
+                initialzeData.Add(0);
+            }
+            s_TileFeatureFlags.SetData(initialzeData);
+
 
             // Cluster
             {
@@ -859,7 +883,14 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 var nrClusterTiles = nrClustersX * nrClustersY * nrStereoLayers;
 
                 s_PerVoxelOffset = new ComputeBuffer((int)LightCategory.Count * (1 << k_Log2NumClusters) * nrClusterTiles, sizeof(uint));
-                s_PerVoxelLightLists = new ComputeBuffer(NumLightIndicesPerClusteredTile() * nrClusterTiles, sizeof(uint));
+                int length = NumLightIndicesPerClusteredTile() * nrClusterTiles;
+                s_PerVoxelLightLists = new ComputeBuffer(length, sizeof(uint));
+                initialzeData.Clear();
+                for (int i = 0; i < length; i++)
+                {
+                    initialzeData.Add(0);
+                }
+                s_PerVoxelLightLists.SetData(initialzeData);
 
                 if (k_UseDepthBuffer)
                 {
@@ -2473,7 +2504,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                     cmd.SetComputeBufferParam(buildPerTileLightListShader, genListPerTileKernel, HDShaderIDs.g_TileFeatureFlags, s_TileFeatureFlags);
                     tileFlagsWritten = true;
                 }
-
+                
                 cmd.DispatchCompute(buildPerTileLightListShader, genListPerTileKernel, numTilesX, numTilesY, XRGraphics.computePassCount);
             }
 

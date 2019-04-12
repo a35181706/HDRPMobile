@@ -130,7 +130,6 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         public float   specularDimmer;
     };
 
-
     [GenerateHLSL]
     public enum EnvShapeType
     {

@@ -51,5 +51,4 @@ public class InitDemo : MonoBehaviour
             entities.Dispose();
         }
     }
-
 }
