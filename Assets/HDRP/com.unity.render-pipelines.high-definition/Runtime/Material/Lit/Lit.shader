@@ -346,7 +346,7 @@ Shader "HDRP/Lit"
         // This tags allow to use the shader replacement features
         Tags{ "RenderPipeline"="HDRenderPipeline" "RenderType" = "HDLitShader" }
 
-        Pass
+        Pass //SceneSelectionPass
         {
             Name "SceneSelectionPass"
             Tags { "LightMode" = "SceneSelectionPass" }
@@ -374,7 +374,7 @@ Shader "HDRP/Lit"
         }
 
         // Caution: The outline selection in the editor use the vertex shader/hull/domain shader of the first pass declare. So it should not bethe  meta pass.
-        Pass
+        Pass //GBuffer
         {
             Name "GBuffer"
             Tags { "LightMode" = "GBuffer" } // This will be only for opaque object based on the RenderQueue index
@@ -427,7 +427,7 @@ Shader "HDRP/Lit"
 
         // Extracts information for lightmapping, GI (emission, albedo, ...)
         // This pass it not used during regular rendering.
-        Pass
+        Pass //META
         {
             Name "META"
             Tags{ "LightMode" = "META" }
@@ -454,7 +454,7 @@ Shader "HDRP/Lit"
             ENDHLSL
         }
 
-        Pass
+        Pass //ShadowCaster
         {
             Name "ShadowCaster"
             Tags{ "LightMode" = "ShadowCaster" }
@@ -484,7 +484,7 @@ Shader "HDRP/Lit"
             ENDHLSL
         }
 
-        Pass
+        Pass //DepthOnly
         {
             Name "DepthOnly"
             Tags{ "LightMode" = "DepthOnly" }
@@ -529,7 +529,7 @@ Shader "HDRP/Lit"
             ENDHLSL
         }
 
-        Pass
+        Pass //MotionVectors
         {
             Name "MotionVectors"
             Tags{ "LightMode" = "MotionVectors" } // Caution, this need to be call like this to setup the correct parameters by C++ (legacy Unity)
@@ -569,7 +569,7 @@ Shader "HDRP/Lit"
             ENDHLSL
         }
 
-        Pass
+        Pass //DistortionVectors
         {
             Name "DistortionVectors"
             Tags { "LightMode" = "DistortionVectors" } // This will be only for transparent object based on the RenderQueue index
@@ -604,7 +604,7 @@ Shader "HDRP/Lit"
             ENDHLSL
         }
 
-        Pass
+        Pass //TransparentDepthPrepass
         {
             Name "TransparentDepthPrepass"
             Tags{ "LightMode" = "TransparentDepthPrepass" }
@@ -631,7 +631,7 @@ Shader "HDRP/Lit"
         }
 
         // Caution: Order is important: TransparentBackface, then Forward/ForwardOnly
-        Pass
+        Pass //TransparentBackface
         {
             Name "TransparentBackface"
             Tags { "LightMode" = "TransparentBackface" }
@@ -688,7 +688,7 @@ Shader "HDRP/Lit"
             ENDHLSL
         }
 
-        Pass
+        Pass //Forward Pass
         {
             Name "Forward"
             Tags { "LightMode" = "Forward" } // This will be only for transparent object based on the RenderQueue index
@@ -759,6 +759,83 @@ Shader "HDRP/Lit"
 
             ENDHLSL
         }
+
+		Pass //ForwadAdd Pass
+		{
+			Name "ForwadAdd"
+			Tags { "LightMode" = "ForwadAdd" } // This will be only for transparent object based on the RenderQueue index
+
+			Stencil
+			{
+				WriteMask[_StencilWriteMask]
+				Ref[_StencilRef]
+				Comp Always
+				Pass Replace
+			}
+
+			Blend[_SrcBlend] One
+			// In case of forward we want to have depth equal for opaque mesh
+			//ZTest[_ZTestDepthEqualForOpaque]
+			//ZWrite[_ZWrite]
+
+			ZWrite Off
+			ZTest LEqual
+			Cull[_CullModeForward]
+			ColorMask[_ColorMaskTransparentVel] 1
+
+			HLSLPROGRAM
+
+			#pragma multi_compile _ DEBUG_DISPLAY
+			#pragma multi_compile _ LIGHTMAP_ON
+			#pragma multi_compile _ DIRLIGHTMAP_COMBINED
+			#pragma multi_compile _ DYNAMICLIGHTMAP_ON
+			#pragma multi_compile _ SHADOWS_SHADOWMASK
+
+			//// Setup DECALS_OFF so the shader stripper can remove variants
+			//#pragma multi_compile DECALS_OFF DECALS_3RT DECALS_4RT
+			#define DECALS_OFF //no support decal
+			#define FORWARD_ADD
+			// Supported shadow modes per light type
+			#pragma multi_compile SHADOW_LOW SHADOW_MEDIUM SHADOW_HIGH SHADOW_VERY_HIGH
+
+			#pragma multi_compile USE_FPTL_LIGHTLIST USE_CLUSTERED_LIGHTLIST
+
+			#define SHADERPASS SHADERPASS_FORWARD
+			// In case of opaque we don't want to perform the alpha test, it is done in depth prepass and we use depth equal for ztest (setup from UI)
+			// Don't do it with debug display mode as it is possible there is no depth prepass in this case
+			#if !defined(_SURFACE_TYPE_TRANSPARENT) && !defined(DEBUG_DISPLAY)
+				#define SHADERPASS_FORWARD_BYPASS_ALPHA_TEST
+			#endif
+			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/ShaderLibrary/ShaderVariables.hlsl"
+			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/Lighting.hlsl"
+			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Material.hlsl"
+
+		#ifdef DEBUG_DISPLAY
+			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Debug/DebugDisplay.hlsl"
+		#endif
+
+			// The light loop (or lighting architecture) is in charge to:
+			// - Define light list
+			// - Define the light loop
+			// - Setup the constant/data
+			// - Do the reflection hierarchy
+			// - Provide sampling function for shadowmap, ies, cookie and reflection (depends on the specific use with the light loops like index array or atlas or single and texture format (cubemap/latlong))
+
+			#define HAS_LIGHTLOOP
+
+			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoopDef.hlsl"
+			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/Lit_Custom.hlsl"
+			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoop_Custom.hlsl"
+
+			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/ShaderPass/LitSharePass.hlsl"
+			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/LitData.hlsl"
+			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/ShaderPassForward_Custom.hlsl"
+
+			#pragma vertex Vert
+			#pragma fragment FragAdd
+
+			ENDHLSL
+		}
 
 
         Pass

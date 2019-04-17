@@ -121,12 +121,16 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         MSAASamples m_MSAASamples;
 
         // The pass "SRPDefaultUnlit" is a fall back to legacy unlit rendering and is required to support unity 2d + unity UI that render in the scene.
-        ShaderTagId[] m_ForwardAndForwardOnlyPassNames = { HDShaderPassNames.s_ForwardOnlyName, HDShaderPassNames.s_ForwardName, HDShaderPassNames.s_SRPDefaultUnlitName };
+        ShaderTagId[] m_ForwardAndForwardOnlyPassNames = { HDShaderPassNames.s_ForwardOnlyName,
+                                                           HDShaderPassNames.s_ForwardName,
+                                                           HDShaderPassNames.s_ForwardAddName,
+                                                           HDShaderPassNames.s_SRPDefaultUnlitName };
         ShaderTagId[] m_ForwardOnlyPassNames = { HDShaderPassNames.s_ForwardOnlyName, HDShaderPassNames.s_SRPDefaultUnlitName };
 
         ShaderTagId[] m_AllTransparentPassNames = {  HDShaderPassNames.s_TransparentBackfaceName,
                                                         HDShaderPassNames.s_ForwardOnlyName,
                                                         HDShaderPassNames.s_ForwardName,
+                                                        HDShaderPassNames.s_ForwardAddName,
                                                         HDShaderPassNames.s_SRPDefaultUnlitName };
 
         ShaderTagId[] m_TransparentNoBackfaceNames = {  HDShaderPassNames.s_ForwardOnlyName,
@@ -136,6 +140,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
         ShaderTagId[] m_AllForwardOpaquePassNames = {    HDShaderPassNames.s_ForwardOnlyName,
                                                             HDShaderPassNames.s_ForwardName,
+                                                            HDShaderPassNames.s_ForwardAddName,
                                                             HDShaderPassNames.s_SRPDefaultUnlitName };
 
         ShaderTagId[] m_DepthOnlyAndDepthForwardOnlyPassNames = { HDShaderPassNames.s_DepthForwardOnlyName, HDShaderPassNames.s_DepthOnlyName };
