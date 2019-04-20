@@ -6,16 +6,23 @@ using System.IO;
 
 public class HDRPTools
 {
+    enum ExportMode
+    {
+        ExprotToProject,
+        ExportToExternalFolder,
+    }
     public static string ProjectCustomHDRPFloderName = "HDRP";
     public static string cacheCustomHDRPFloderName = "HDRPCache";
     public static string RPCoreFloderName = "com.unity.render-pipelines.core";
     public static string HDRPFloderName = "com.unity.render-pipelines.high-definition";
     public static string ShaderGraphFloderName = "com.unity.shadergraph";
 
+    private static ExportMode s_exportMode = ExportMode.ExprotToProject;
 
     [MenuItem("Tools/HDRP/SynsHDRPToProject")]
     public static void SynsHDRPToProject()
     {
+        s_exportMode = ExportMode.ExprotToProject;
         SyncHDRPFolder(Application.dataPath, RPCoreFloderName);
         SyncHDRPFolder(Application.dataPath, HDRPFloderName);
         SyncHDRPFolder(Application.dataPath, ShaderGraphFloderName);
@@ -31,6 +38,7 @@ public class HDRPTools
     [MenuItem("Tools/HDRP/SynsHDRPToExternalCache")]
     public static void SynsHDRPToExternalCache()
     {
+        s_exportMode = ExportMode.ExportToExternalFolder;
         string cacheFolder = Application.dataPath.Replace("Assets", cacheCustomHDRPFloderName);
 
         SyncHDRPFolder(cacheFolder, RPCoreFloderName);
@@ -111,11 +119,22 @@ public class HDRPTools
 
             string newPath = CommonUtil.CombinePath(newCsFileFolder,excFolderPath);
 
-            CommonUtil.MoveFileHelper(csFile, newPath);
+            CommonUtil.RemoveFileReadOnlyAttribute(csFile);
+            CommonUtil.CopyFileHelper(csFile, newPath);
             CommonUtil.RemoveFileReadOnlyAttribute(newPath);
 
-            CommonUtil.MoveFileHelper(csFile + ".meta", newPath + ".meta");
-            CommonUtil.RemoveFileReadOnlyAttribute(newPath + ".meta");
+            if (s_exportMode == ExportMode.ExprotToProject)
+            {
+                CommonUtil.DeleteFileHelper(csFile);
+            }
+
+            CommonUtil.RemoveFileReadOnlyAttribute(csFile + ".meta");
+            CommonUtil.CopyFileHelper(csFile + ".meta", newPath + ".meta");
+            if (s_exportMode == ExportMode.ExprotToProject)
+            {
+                CommonUtil.DeleteFileHelper(csFile + ".meta");
+            }
+           
         }
     }
 
