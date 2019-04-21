@@ -1,6 +1,8 @@
 //-----------------------------------------------------------------------------
 // structure definition
 //-----------------------------------------------------------------------------
+using UnityEngine.Experimental.Rendering.HDPipeline.Attributes;
+
 namespace UnityEngine.Experimental.Rendering.HDPipeline
 {
     public class Builtin // Note: This particular class doesn't derive from RenderPipelineMaterial
@@ -14,6 +16,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         [GenerateHLSL(PackingRules.Exact, false, false, true, 100)]
         public struct BuiltinData
         {
+            [MaterialSharedPropertyMapping(MaterialSharedProperty.Alpha)]
             [SurfaceDataAttributes("Opacity")]
             public float opacity;
 
@@ -41,8 +44,8 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             public Vector3 emissiveColor;
 
             // These is required for motion blur and temporalAA
-            [SurfaceDataAttributes("Velocity")]
-            public Vector2 velocity;
+            [SurfaceDataAttributes("MotionVector")]
+            public Vector2 motionVector;
 
             // Distortion
             [SurfaceDataAttributes("Distortion")]
@@ -72,23 +75,23 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
         public static GraphicsFormat GetLightingBufferFormat()
         {
-            return HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.B10G11R11_UFloatPack32);
+            return UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.B10G11R11_UFloatPack32);
         }
 
         public static GraphicsFormat GetShadowMaskBufferFormat()
         {
-            return HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_UNorm);
+            return UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_UNorm);
         }
 
-        public static GraphicsFormat GetVelocityBufferFormat()
+        public static GraphicsFormat GetMotionVectorFormat()
         {
-            return HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16_SFloat); // TODO: We should use 16bit normalized instead, better precision // RGInt
+            return UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16_SFloat); // TODO: We should use 16bit normalized instead, better precision // RGInt
         }
 
         public static GraphicsFormat GetDistortionBufferFormat()
         {
             // TODO: // This format need to be additive blendable and include distortionBlur, blend mode different for alpha value
-            return HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16B16A16_SFloat);
+            return UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16B16A16_SFloat);
         }
     }
 }

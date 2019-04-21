@@ -60,11 +60,11 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             {
                 string momentShadowMapName = m_Name + "Moment";
                 m_AtlasMoments = new RTHandleSystem.RTHandle[1];
-                m_AtlasMoments[0] = RTHandles.Alloc(width, height, filterMode: FilterMode.Point, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32G32B32A32_SFloat), enableRandomWrite: true, name: momentShadowMapName);
+                m_AtlasMoments[0] = RTHandles.Alloc(width, height, filterMode: FilterMode.Point, colorFormat: UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32G32B32A32_SFloat), enableRandomWrite: true, name: momentShadowMapName);
                 string intermediateSummedAreaName = m_Name + "IntermediateSummedArea";
-                m_IntermediateSummedAreaTexture = RTHandles.Alloc(width, height, filterMode: FilterMode.Point, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32G32B32A32_SInt), enableRandomWrite: true, name: intermediateSummedAreaName);
+                m_IntermediateSummedAreaTexture = RTHandles.Alloc(width, height, filterMode: FilterMode.Point, colorFormat: UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32G32B32A32_SInt), enableRandomWrite: true, name: intermediateSummedAreaName);
                 string summedAreaName = m_Name + "SummedAreaFinal";
-                m_SummedAreaTexture = RTHandles.Alloc(width, height, filterMode: FilterMode.Point, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32G32B32A32_SInt), enableRandomWrite: true, name: summedAreaName);
+                m_SummedAreaTexture = RTHandles.Alloc(width, height, filterMode: FilterMode.Point, colorFormat: UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32G32B32A32_SInt), enableRandomWrite: true, name: summedAreaName);
             }
             else if (m_isBlurredEVSM)
             {
@@ -72,7 +72,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 m_AtlasMoments = new RTHandleSystem.RTHandle[2];
                 for (int i = 0; i < 2; ++i)
                 {
-                    m_AtlasMoments[i] = RTHandles.Alloc(width / 2, height / 2, filterMode: FilterMode.Point, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32G32_SFloat), useMipMap: true, autoGenerateMips: false, enableRandomWrite: true, name: momentShadowMapNames[i]);
+                    m_AtlasMoments[i] = RTHandles.Alloc(width / 2, height / 2, filterMode: FilterMode.Point, colorFormat: UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32G32_SFloat), useMipMap: true, autoGenerateMips: false, enableRandomWrite: true, name: momentShadowMapNames[i]);
                 }
             }
 
@@ -257,8 +257,6 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             {
                 cmd.SetViewport(shadowRequest.atlasViewport);
 
-                cmd.SetViewProjectionMatrices(shadowRequest.view, shadowRequest.projection);
-
                 cmd.SetGlobalFloat(HDShaderIDs._ZClip, shadowRequest.zClip ? 1.0f : 0.0f);
                 if (!m_LightingDebugSettings.clearShadowAtlas)
                 {
@@ -267,6 +265,16 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
                 dss.lightIndex = shadowRequest.lightIndex;
                 dss.splitData = shadowRequest.splitData;
+
+                // Setup matrices for shadow rendering:
+                Matrix4x4 viewProjection = shadowRequest.deviceProjectionYFlip * shadowRequest.view;
+                cmd.SetGlobalMatrix(HDShaderIDs._ViewMatrix, shadowRequest.view);
+                cmd.SetGlobalMatrix(HDShaderIDs._InvViewMatrix, shadowRequest.view.inverse);
+                cmd.SetGlobalMatrix(HDShaderIDs._ProjMatrix, shadowRequest.deviceProjectionYFlip);
+                cmd.SetGlobalMatrix(HDShaderIDs._InvProjMatrix, shadowRequest.deviceProjectionYFlip.inverse);
+                cmd.SetGlobalMatrix(HDShaderIDs._ViewProjMatrix, viewProjection);
+                cmd.SetGlobalMatrix(HDShaderIDs._InvViewProjMatrix, viewProjection.inverse);
+                cmd.SetGlobalVectorArray(HDShaderIDs._ShadowClipPlanes, shadowRequest.frustumPlanes);
 
                 // TODO: remove this execute when DrawShadows will use a CommandBuffer
                 renderContext.ExecuteCommandBuffer(cmd);

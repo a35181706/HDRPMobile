@@ -5,7 +5,8 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 {
     public enum GradingLutFormat
     {
-        RGB111110Float = GraphicsFormat.B10G11R11_UFloatPack32,
+        //using rgbhalf,because not support for mobile
+       //RGB111110Float = GraphicsFormat.B10G11R11_UFloatPack32,
         ARGBHalf = GraphicsFormat.R16G16B16A16_SFloat,
         ARGBFloat = GraphicsFormat.R32G32B32A32_SFloat
     }

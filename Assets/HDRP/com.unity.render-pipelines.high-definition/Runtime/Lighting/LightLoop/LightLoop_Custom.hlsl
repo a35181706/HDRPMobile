@@ -1,7 +1,9 @@
 #include "Assets/HDRP/com.unity.render-pipelines.core/ShaderLibrary/Macros.hlsl"
-//-----------------------------------------------------------------------------
-// PostEvaluateBSDF
-// ----------------------------------------------------------------------------
+
+// We perform scalarization only for forward rendering as for deferred loads will already be scalar since tiles will match waves and therefore all threads will read from the same tile. 
+// More info on scalarization: https://flashypixels.wordpress.com/2018/11/10/intro-to-gpu-scalarization-part-2-scalarize-all-the-lights/
+#define SCALARIZE_LIGHT_LOOP (defined(SUPPORTS_WAVE_INTRINSICS) && !defined(LIGHTLOOP_DISABLE_TILE_AND_CLUSTER) && SHADERPASS == SHADERPASS_FORWARD)
+
 void PostEvaluateBSDF1(LightLoopContext lightLoopContext,
 	float3 V, PositionInputs posInput,
 	PreLightData preLightData, BSDFData bsdfData, BuiltinData builtinData, AggregateLighting lighting,
@@ -19,16 +21,14 @@ void PostEvaluateBSDF1(LightLoopContext lightLoopContext,
 	// Subsurface scattering mode
 	float3 modifiedDiffuseColor = GetModifiedDiffuseColorForSSS(bsdfData);
 
+#ifndef FORWARD_ADD
 	// Apply the albedo to the direct diffuse lighting (only once). The indirect (baked)
 	// diffuse lighting has already multiply the albedo in ModifyBakedDiffuseLighting().
 	// Note: In deferred bakeDiffuseLighting also contain emissive and in this case emissiveColor is 0
-
-#ifndef FORWARD_ADD
 	diffuseLighting = modifiedDiffuseColor * lighting.direct.diffuse + builtinData.bakeDiffuseLighting + builtinData.emissiveColor;
 #else
 	diffuseLighting = modifiedDiffuseColor * lighting.direct.diffuse;
 #endif
-
 	// If refraction is enable we use the transmittanceMask to lerp between current diffuse lighting and refraction value
 	// Physically speaking, transmittanceMask should be 1, but for artistic reasons, we let the value vary
 	//
@@ -47,6 +47,8 @@ void PostEvaluateBSDF1(LightLoopContext lightLoopContext,
 	PostEvaluateBSDFDebugDisplay(aoFactor, builtinData, lighting, bsdfData.diffuseColor, diffuseLighting, specularLighting);
 #endif
 }
+
+
 //-----------------------------------------------------------------------------
 // LightLoop
 // ----------------------------------------------------------------------------
@@ -112,13 +114,10 @@ void ApplyDebug(LightLoopContext lightLoopContext, PositionInputs posInput, BSDF
 #endif
 }
 
-// We perform scalarization only for forward rendering as for deferred loads will already be scalar since tiles will match waves and therefore all threads will read from the same tile. 
-// More info on scalarization: https://flashypixels.wordpress.com/2018/11/10/intro-to-gpu-scalarization-part-2-scalarize-all-the-lights/
-#define SCALARIZE_LIGHT_LOOP (defined(SUPPORTS_WAVE_INTRINSICS) && !defined(LIGHTLOOP_DISABLE_TILE_AND_CLUSTER) && SHADERPASS == SHADERPASS_FORWARD)
-
 void LightLoop_EnvAndSkyAndSSR(LightLoopContext context, float3 V, PositionInputs posInput, PreLightData preLightData, BSDFData bsdfData, BuiltinData builtinData, uint featureFlags,
 	inout AggregateLighting aggregateLighting)
 {
+	uint i = 0; // Declare once to avoid the D3D11 compiler warning.
 	// Define macro for a better understanding of the loop
 	// TODO: this code is now much harder to understand...
 #define EVALUATE_BSDF_ENV_SKY(envLightData, TYPE, type) \
@@ -325,12 +324,13 @@ void LightLoop_AreaLight(LightLoopContext context, float3 V, PositionInputs posI
 			}
 		}
 	}
+
+	
 }
 
 void LightLoop_PunctalLight(LightLoopContext context, float3 V, PositionInputs posInput, PreLightData preLightData, BSDFData bsdfData, BuiltinData builtinData, uint featureFlags,
 	inout AggregateLighting aggregateLighting)
 {
-
 	if (featureFlags & LIGHTFEATUREFLAGS_PUNCTUAL)
 	{
 		uint lightCount, lightStart;
@@ -415,7 +415,8 @@ void LightLoop_DirectLightShadow(inout LightLoopContext context, float3 V, Posit
 
 			// TODO: this will cause us to load from the normal buffer first. Does this cause a performance problem?
 			// Also, the light direction is not consistent with the sun disk highlight hack, which modifies the light vector.
-			float  NdotL = dot(bsdfData.normalWS, -light.forward);
+			float3 L = -light.forward;
+			float  NdotL = dot(bsdfData.normalWS, L);
 			float3 shadowBiasNormal = GetNormalForShadowBias(bsdfData);
 			bool   evaluateShadows = (NdotL > 0);
 
@@ -429,7 +430,7 @@ void LightLoop_DirectLightShadow(inout LightLoopContext context, float3 V, Posit
 					evaluateShadows = true;
 
 					// Care must be taken to bias in the direction of the light.
-					shadowBiasNormal *= FastSign(NdotL);
+					shadowBiasNormal *= FastSign(dot(shadowBiasNormal, L));
 				}
 				else
 				{
@@ -444,6 +445,7 @@ void LightLoop_DirectLightShadow(inout LightLoopContext context, float3 V, Posit
 			}
 		}
 	}
+
 }
 
 void LightLoop_DirectLight(LightLoopContext context, float3 V, PositionInputs posInput, PreLightData preLightData, BSDFData bsdfData, BuiltinData builtinData, uint featureFlags,
@@ -485,18 +487,21 @@ void LightLoop(float3 V, PositionInputs posInput, PreLightData preLightData, BSD
 	LightLoop_DirectLightShadow(context,V, posInput, bsdfData, featureFlags); 
 	LightLoop_DirectLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
 #else
+
 	LightLoop_PunctalLight(context,V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
-	LightLoop_AreaLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
 	LightLoop_EnvAndSkyAndSSR(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
+	LightLoop_AreaLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
+	
 #endif
 
 
 	//LightLoop_DirectLightShadow(context, V, posInput, bsdfData, featureFlags);
-	//LightLoop_DirectLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
 
 	//LightLoop_PunctalLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
-	//LightLoop_AreaLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
+	//LightLoop_DirectLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
 	//LightLoop_EnvAndSkyAndSSR(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
+	//LightLoop_AreaLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
+	
 
 
 	// Also Apply indiret diffuse (GI)

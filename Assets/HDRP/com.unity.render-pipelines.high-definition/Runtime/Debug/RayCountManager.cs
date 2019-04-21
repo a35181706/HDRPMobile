@@ -40,7 +40,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             m_DebugDisplaySettings = currentDebugDisplaySettings;
             m_PipelineResources = renderPipelineResources;
 
-            m_RayCountTexture = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: GraphicsFormat.R32G32B32A32_UInt, enableRandomWrite: true, useMipMap: false, name: "RayCountTexture");
+            m_RayCountTexture = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat:  UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32G32B32A32_UInt), enableRandomWrite: true, useMipMap: false, name: "RayCountTexture");
 
             // We only require 3 buffers (this supports a maximal size of 8192x8192)
             m_ReducedRayCountBuffer0 = new ComputeBuffer(4 * 256 * 256, sizeof(uint));

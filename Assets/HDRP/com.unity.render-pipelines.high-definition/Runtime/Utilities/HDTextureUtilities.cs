@@ -21,7 +21,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             }
             else if (cube != null)
             {
-                var t2D = new Texture2D(cube.width * 6, cube.height, GraphicsFormat.R16G16B16A16_SFloat, TextureCreationFlags.None);
+                var t2D = new Texture2D(cube.width * 6, cube.height, UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16B16A16_SFloat), TextureCreationFlags.None);
                 var cmd = new CommandBuffer { name = "CopyCubemapToTexture2D" };
                 for (int i = 0; i < 6; ++i)
                 {

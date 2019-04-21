@@ -1,4 +1,5 @@
 using System;
+using UnityEngine.Experimental.Rendering.HDPipeline.Attributes;
 using UnityEngine.Rendering;
 
 namespace UnityEngine.Experimental.Rendering.HDPipeline
@@ -33,19 +34,25 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             public uint materialFeatures;
 
             // Standard
+            [MaterialSharedPropertyMapping(MaterialSharedProperty.Albedo)]
             [SurfaceDataAttributes("Base Color", false, true)]
             public Vector3 baseColor;
             [SurfaceDataAttributes("Specular Occlusion")]
             public float specularOcclusion;
 
+            [MaterialSharedPropertyMapping(MaterialSharedProperty.Normal)]
             [SurfaceDataAttributes(new string[] {"Normal", "Normal View Space"}, true)]
             public Vector3 normalWS;
+
+            [MaterialSharedPropertyMapping(MaterialSharedProperty.Smoothness)]
             [SurfaceDataAttributes("Smoothness")]
             public float perceptualSmoothness;
 
+            [MaterialSharedPropertyMapping(MaterialSharedProperty.AmbientOcclusion)]
             [SurfaceDataAttributes("Ambient Occlusion")]
             public float ambientOcclusion;
 
+            [MaterialSharedPropertyMapping(MaterialSharedProperty.Metal)]
             [SurfaceDataAttributes("Metallic")]
             public float metallic;
 
@@ -55,6 +62,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             // MaterialFeature dependent attribute
 
             // Specular Color
+            [MaterialSharedPropertyMapping(MaterialSharedProperty.Specular)]
             [SurfaceDataAttributes("Specular Color", false, true)]
             public Vector3 specularColor;
 
@@ -197,24 +205,30 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             gBufferUsage = new GBufferUsage[gBufferCount];
             enableWrite = new bool[gBufferCount];
 
-            RTFormat[0] = HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_SRGB); // Albedo sRGB / SSSBuffer
+            RTFormat[0] = UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_SRGB); // Albedo sRGB / SSSBuffer
             gBufferUsage[0] = GBufferUsage.SubsurfaceScattering;
             enableWrite[0] = false;
-            RTFormat[1] = HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_UNorm); // Normal Buffer
+            RTFormat[1] = UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_UNorm); // Normal Buffer
             gBufferUsage[1] = GBufferUsage.Normal;
             enableWrite[1] = true;                    // normal buffer is used as RWTexture to composite decals in forward
-            RTFormat[2] = HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_UNorm); // Data
+            RTFormat[2] = UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_UNorm); // Data
             gBufferUsage[2] = GBufferUsage.None;
             enableWrite[2] = false;
             RTFormat[3] = Builtin.GetLightingBufferFormat();
             gBufferUsage[3] = GBufferUsage.None;
+
+            // If we are in raytracing mode and we want to have indirect diffuse active, we need to make sure that the gbuffer3 is writable
+            #if ENABLE_RAYTRACING
+            enableWrite[3] = true;
+            #else
             enableWrite[3] = false;
+            #endif
 
             int index = 4;
 
             if (supportLightLayers)
             {
-                RTFormat[index] = HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_UNorm);
+                RTFormat[index] = UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R8G8B8A8_UNorm);
                 gBufferUsage[index] = GBufferUsage.LightLayers;
                 index++;
             }

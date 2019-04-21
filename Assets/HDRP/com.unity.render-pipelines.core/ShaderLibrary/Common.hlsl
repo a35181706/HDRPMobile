@@ -91,15 +91,13 @@
 //#define half4x3 min16float4x3
 //#define half4x4 min16float4x4
 //
-//#define REAL_MIN FLT_MIN
-//#define REAL_MAX FLT_MAX
-//#define TEMPLATE_1_REAL TEMPLATE_1_FLT
-//#define TEMPLATE_2_REAL TEMPLATE_2_FLT
-//#define TEMPLATE_3_REAL TEMPLATE_3_FLT
+//#define REAL_MIN HALF_MIN
+//#define REAL_MAX HALF_MAX
+//#define TEMPLATE_1_REAL TEMPLATE_1_HALF
+//#define TEMPLATE_2_REAL TEMPLATE_2_HALF
+//#define TEMPLATE_3_REAL TEMPLATE_3_HALF
 //
 //#define HAS_HALF 1
-
-
 #define real float
 #define real2 float2
 #define real3 float3
@@ -512,7 +510,7 @@ float FastSign(float s, bool ignoreNegZero = true)
 
 // Orthonormalizes the tangent frame using the Gram-Schmidt process.
 // We assume that the normal is normalized and that the two vectors
-// aren't colinear.
+// aren't collinear.
 // Returns the new tangent (the normal is unaffected).
 real3 Orthonormalize(real3 tangent, real3 normal)
 {

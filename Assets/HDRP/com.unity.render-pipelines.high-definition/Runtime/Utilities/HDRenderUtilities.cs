@@ -24,7 +24,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         ///         settings.position.position = new Vector3(0, 1, 0);
         ///         settings.camera.frustum.fieldOfView = 60.0f;
         ///         // Get our render target
-        ///         var rt = new RenderTexture(128, 128, 1, GraphicsFormat.B8G8R8A8_SNorm);
+        ///         var rt = new RenderTexture(128, 128, 1, UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.B8G8R8A8_SNorm));
         ///         HDRenderUtilities.Render(settings, rt);
         ///         // Do something with rt
         ///         rt.Release();
@@ -45,7 +45,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         ///         settings.camera.physical.iso = 800.0f;
         ///         // Frustum settings are ignored and driven by the cubemap rendering
         ///         // Get our render target
-        ///         var rt = new RenderTexture(128, 128, 1, GraphicsFormat.B8G8R8A8_SNorm)
+        ///         var rt = new RenderTexture(128, 128, 1, UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.B8G8R8A8_SNorm))
         ///         {
         ///             dimension = TextureDimension.Cube
         ///         };
@@ -272,7 +272,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
         public static RenderTexture CreateReflectionProbeRenderTarget(int cubemapSize)
         {
-            return new RenderTexture(cubemapSize, cubemapSize, 1, GraphicsFormat.R16G16B16A16_SFloat)
+            return new RenderTexture(cubemapSize, cubemapSize, 1, UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16B16A16_SFloat))
             {
                 dimension = TextureDimension.Cube,
                 enableRandomWrite = true,
@@ -283,7 +283,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
         public static RenderTexture CreatePlanarProbeRenderTarget(int planarSize)
         {
-            return new RenderTexture(planarSize, planarSize, 1, GraphicsFormat.R16G16B16A16_SFloat)
+            return new RenderTexture(planarSize, planarSize, 1, UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16B16A16_SFloat))
             {
                 dimension = TextureDimension.Tex2D,
                 enableRandomWrite = true,
@@ -294,7 +294,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
         public static Cubemap CreateReflectionProbeTarget(int cubemapSize)
         {
-            return new Cubemap(cubemapSize, GraphicsFormat.R16G16B16A16_SFloat, TextureCreationFlags.None);
+            return new Cubemap(cubemapSize, UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16B16A16_SFloat), TextureCreationFlags.None);
         }
 
         static Camera NewRenderingCamera()

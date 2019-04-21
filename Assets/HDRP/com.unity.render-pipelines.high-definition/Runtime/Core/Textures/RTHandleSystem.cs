@@ -350,9 +350,7 @@ namespace UnityEngine.Experimental.Rendering
                 };
             }
 
-
             rt.Create();
-
 
             RTCategory category = enableMSAA ? RTCategory.MSAA : RTCategory.Regular;
             var newRT = new RTHandle(this);

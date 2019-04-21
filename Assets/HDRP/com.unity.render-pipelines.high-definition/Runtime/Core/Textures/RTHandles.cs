@@ -15,7 +15,7 @@ namespace UnityEngine.Experimental.Rendering
             int height,
             int slices = 1,
             DepthBits depthBufferBits = DepthBits.None,
-            GraphicsFormat colorFormat = GraphicsFormat.R8G8B8A8_SRGB,
+            GraphicsFormat colorFormat =GraphicsFormat.R8G8B8A8_SRGB,
             FilterMode filterMode = FilterMode.Point,
             TextureWrapMode wrapMode = TextureWrapMode.Repeat,
             TextureDimension dimension = TextureDimension.Tex2D,

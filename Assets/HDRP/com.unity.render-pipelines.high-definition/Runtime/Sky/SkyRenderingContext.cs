@@ -13,7 +13,6 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         RTHandleSystem.RTHandle     m_SkyboxConditionalCdfRT;
         Vector4                     m_CubemapScreenSize;
         Matrix4x4[]                 m_facePixelCoordToViewDirMatrices   = new Matrix4x4[6];
-        Matrix4x4[]                 m_faceCameraInvViewProjectionMatrix = new Matrix4x4[6];
         bool                        m_SupportsConvolution = false;
         bool                        m_SupportsMIS = false;
         BuiltinSkyParameters        m_BuiltinParameters = new BuiltinSkyParameters();
@@ -71,12 +70,11 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             // Reallocate everything
             if (m_SkyboxCubemapRT == null)
             {
-                
-                m_SkyboxCubemapRT = RTHandles.Alloc(resolution, resolution, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16B16A16_SFloat), dimension: TextureDimension.Cube, useMipMap: true, autoGenerateMips: false, filterMode: FilterMode.Trilinear, name: "SkyboxCubemap");
+                m_SkyboxCubemapRT = RTHandles.Alloc(resolution, resolution, colorFormat: UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16B16A16_SFloat), dimension: TextureDimension.Cube, useMipMap: true, autoGenerateMips: false, filterMode: FilterMode.Trilinear, name: "SkyboxCubemap");
 
                 if (m_SupportsConvolution)
                 {
-                    m_SkyboxBSDFCubemapIntermediate = RTHandles.Alloc(resolution, resolution, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16B16A16_SFloat), dimension: TextureDimension.Cube, useMipMap: true, autoGenerateMips: false, filterMode: FilterMode.Trilinear, name: "SkyboxBSDFIntermediate");
+                    m_SkyboxBSDFCubemapIntermediate = RTHandles.Alloc(resolution, resolution, colorFormat: UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16B16A16_SFloat), dimension: TextureDimension.Cube, useMipMap: true, autoGenerateMips: false, filterMode: FilterMode.Trilinear, name: "SkyboxBSDFIntermediate");
                     m_SkyboxBSDFCubemapArray = new CubemapArray(resolution, m_IBLFilterArray.Length, TextureFormat.RGBAHalf, true)
                     {
                         hideFlags = HideFlags.HideAndDontSave,
@@ -95,10 +93,10 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                     int height = (int)LightSamplingParameters.TextureHeight;
 
                     // + 1 because we store the value of the integral of the cubemap at the end of the texture.
-                    m_SkyboxMarginalRowCdfRT = RTHandles.Alloc(height + 1, 1, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32_SFloat), useMipMap: false, enableRandomWrite: true, filterMode: FilterMode.Point, name: "SkyboxMarginalRowCdf");
+                    m_SkyboxMarginalRowCdfRT = RTHandles.Alloc(height + 1, 1, colorFormat: UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32_SFloat), useMipMap: false, enableRandomWrite: true, filterMode: FilterMode.Point, name: "SkyboxMarginalRowCdf");
 
                     // TODO: switch the format to R16 (once it's available) to save some bandwidth.
-                    m_SkyboxConditionalCdfRT = RTHandles.Alloc(width, height, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32_SFloat), useMipMap: false, enableRandomWrite: true, filterMode: FilterMode.Point, name: "SkyboxConditionalRowCdf");
+                    m_SkyboxConditionalCdfRT = RTHandles.Alloc(width, height, colorFormat: UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R32_SFloat), useMipMap: false, enableRandomWrite: true, filterMode: FilterMode.Point, name: "SkyboxConditionalRowCdf");
                 }
             }
 
@@ -121,7 +119,6 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 var worldToView = lookAt * Matrix4x4.Scale(new Vector3(1.0f, 1.0f, -1.0f)); // Need to scale -1.0 on Z to match what is being done in the camera.wolrdToCameraMatrix API. ...
 
                 m_facePixelCoordToViewDirMatrices[i] = HDUtils.ComputePixelCoordToWorldSpaceViewDirectionMatrix(0.5f * Mathf.PI, Vector2.zero, m_CubemapScreenSize, worldToView, true);
-                m_faceCameraInvViewProjectionMatrix[i] = HDUtils.GetViewProjectionMatrix(lookAt, cubeProj).inverse;
             }
         }
 
@@ -145,13 +142,12 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             for (int i = 0; i < 6; ++i)
             {
                 m_BuiltinParameters.pixelCoordToViewDirMatrix = m_facePixelCoordToViewDirMatrices[i];
-                m_BuiltinParameters.invViewProjMatrix = m_faceCameraInvViewProjectionMatrix[i];
                 m_BuiltinParameters.colorBuffer = m_SkyboxCubemapRT;
                 m_BuiltinParameters.depthBuffer = null;
                 m_BuiltinParameters.hdCamera = null;
 
                 CoreUtils.SetRenderTarget(m_BuiltinParameters.commandBuffer, m_SkyboxCubemapRT, ClearFlag.None, 0, (CubemapFace)i);
-                skyContext.renderer.RenderSky(m_BuiltinParameters, true, skyContext.skySettings.includeSunInBaking);
+                skyContext.renderer.RenderSky(m_BuiltinParameters, true, skyContext.skySettings.includeSunInBaking.value);
             }
 
             // Generate mipmap for our cubemap
@@ -238,14 +234,14 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 bool forceUpdate = (updateRequired || skyContext.updatedFramesRequired > 0 || m_NeedUpdate);
                 if (forceUpdate ||
                     (skyContext.skySettings.updateMode == EnvironementUpdateMode.OnChanged && skyHash != skyContext.skyParametersHash) ||
-                    (skyContext.skySettings.updateMode == EnvironementUpdateMode.Realtime && skyContext.currentUpdateTime > skyContext.skySettings.updatePeriod))
+                    (skyContext.skySettings.updateMode == EnvironementUpdateMode.Realtime && skyContext.currentUpdateTime > skyContext.skySettings.updatePeriod.value))
                 {
                     using (new ProfilingSample(cmd, "Sky Environment Pass"))
                     {
                         using (new ProfilingSample(cmd, "Update Env: Generate Lighting Cubemap"))
                         {
                             RenderSkyToCubemap(skyContext);
-                         
+
                             if (updateAmbientProbe)
                             {
                                 using (new ProfilingSample(cmd, "Update Ambient Probe"))
@@ -319,7 +315,6 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 #else
                     m_BuiltinParameters.pixelCoordToViewDirMatrix = HDUtils.ComputePixelCoordToWorldSpaceViewDirectionMatrix(hdCamera.camera.fieldOfView * Mathf.Deg2Rad, Vector2.zero, hdCamera.screenSize, hdCamera.viewMatrix, false);
 #endif
-                    m_BuiltinParameters.invViewProjMatrix = hdCamera.viewProjMatrix.inverse;
                     m_BuiltinParameters.screenSize = hdCamera.screenSize;
                     m_BuiltinParameters.cameraPosWS = hdCamera.camera.transform.position;
                     m_BuiltinParameters.colorBuffer = colorBuffer;
@@ -333,7 +328,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                     if (debugSettings.data.lightingDebugSettings.debugLightingMode != DebugLightingMode.LuxMeter)
                     {
                         // When rendering the visual sky for reflection probes, we need to remove the sun disk if skySettings.includeSunInBaking is false.
-                        skyContext.renderer.RenderSky(m_BuiltinParameters, false, hdCamera.camera.cameraType != CameraType.Reflection || skyContext.skySettings.includeSunInBaking);
+                        skyContext.renderer.RenderSky(m_BuiltinParameters, false, hdCamera.camera.cameraType != CameraType.Reflection || skyContext.skySettings.includeSunInBaking.value);
                     }
                 }
             }

@@ -11,10 +11,10 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Demo/ECS+GPU+JobSystem/ECS+GPU+Job.unity
     guid: 6f915f44da20827469e3afff75d72e4f
-  - enabled: 0
+  - enabled: 1
     path: Assets/Demo/HDRPMobileFeature/Light.unity
     guid: b5e3745d13c7e794998b4a5a4b8dd8dd
-  - enabled: 1
+  - enabled: 0
     path: Assets/Demo/HDRPMobileFeature/FinalFeature/Scenes/FinalFeature.unity
     guid: cbfe36cfddfde964d9dfce63a355d5dd
   m_configObjects: {}
