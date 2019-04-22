@@ -665,11 +665,11 @@ Shader "HDRP/Lit"
 
             #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoopDef.hlsl"
             #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/Lit.hlsl"
-            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoop_Custom.hlsl"
+            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoop.hlsl"
 
             #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/ShaderPass/LitSharePass.hlsl"
             #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/LitData.hlsl"
-            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/ShaderPassForward_Custom.hlsl"
+            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/ShaderPassForward.hlsl"
 
             #pragma vertex Vert
             #pragma fragment Frag
@@ -761,8 +761,8 @@ Shader "HDRP/Lit"
 				Pass Replace
 			}
 
-			//Blend[_SrcBlend] One,[_AlphaSrcBlend] One
-			Blend One Zero
+			Blend[_SrcBlend] One
+			//Blend One Zero
 			//Blend[_SrcBlend] One,[_AlphaSrcBlend] [_AlphaDstBlend]
 			// In case of forward we want to have depth equal for opaque mesh
 			ZTest LEqual

@@ -139,6 +139,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
         ShaderTagId[] m_TransparentNoBackfaceNames = {  HDShaderPassNames.s_ForwardOnlyName,
                                                         HDShaderPassNames.s_ForwardName,
+                                                        HDShaderPassNames.s_ForwardAddName,
                                                         HDShaderPassNames.s_SRPDefaultUnlitName };
 
 

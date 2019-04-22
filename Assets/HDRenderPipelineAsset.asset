@@ -16,7 +16,7 @@ MonoBehaviour:
     type: 2}
   m_RenderingPathDefaultCameraFrameSettings:
     bitDatas:
-      data1: 69284255760157
+      data1: 69284255693597
       data2: 4107282860161892352
   m_RenderingPathDefaultBakedOrCustomReflectionFrameSettings:
     bitDatas:
@@ -39,7 +39,8 @@ MonoBehaviour:
     supportTransparentBackface: 1
     supportTransparentDepthPrepass: 1
     supportTransparentDepthPostpass: 1
-    colorBufferFormat: 74
+    supportLowResTransparent: 1
+    colorBufferFormat: 48
     supportedLitShaderMode: 1
     supportDecals: 1
     msaaSampleCount: 1
@@ -96,6 +97,10 @@ MonoBehaviour:
       upsampleFilter: 1
       forceResolution: 0
       forcedPercentage: 100
+    lowresTransparentSettings:
+      enabled: 1
+      checkerboardDepthBuffer: 1
+      upsampleType: 1
   allowShaderVariantStripping: 1
   enableSRPBatcher: 0
   shaderVariantLogLevel: 0
