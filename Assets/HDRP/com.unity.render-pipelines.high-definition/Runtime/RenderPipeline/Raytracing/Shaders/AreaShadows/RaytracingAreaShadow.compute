@@ -83,7 +83,7 @@ void RaytracingAreaShadowPrepass(uint2 groupThreadId : SV_GroupThreadID, uint2 g
     float3 viewWS = normalize(_WorldSpaceCameraPos - positionWS);
 
     // Fetch the data of the area light
-    LightData lightData = _LightDatas[_RaytracingTargetAreaLight];
+    LightData lightData = FetchLight(_RaytracingTargetAreaLight);
 
     // Structure that holds all the input data for the MIS
     MISSamplingInput misInput;
@@ -132,7 +132,7 @@ void RaytracingAreaShadowPrepass(uint2 groupThreadId : SV_GroupThreadID, uint2 g
     float U = Luminance(lighting.diffuse + lighting.specular);
 
     // NOTE: Due to a VGPR optimisation in we need to restore the previous value (position, dimmer, and other thing are overriden)
-    lightData = _LightDatas[_RaytracingTargetAreaLight];
+    lightData = FetchLight(_RaytracingTargetAreaLight);
 
     // Here we need to evaluate the diffuseProbablity and the unshadowed lighting
     if(!EvaluateMISProbabilties(lighting, bsdfData.perceptualRoughness, misInput.brdfProb))
@@ -258,7 +258,7 @@ void RaytracingAreaShadowNewSample(uint2 groupThreadId : SV_GroupThreadID, uint2
     DecodeFromNormalBuffer(currentCoord, normalData);
 
     // Fetch the data of the area light
-    LightData lightData = _LightDatas[_RaytracingTargetAreaLight];
+    LightData lightData = FetchLight(_RaytracingTargetAreaLight);
 
     // Convert this to a world space position
     float3 positionWS = GetAbsolutePositionWS(posInput.positionWS);

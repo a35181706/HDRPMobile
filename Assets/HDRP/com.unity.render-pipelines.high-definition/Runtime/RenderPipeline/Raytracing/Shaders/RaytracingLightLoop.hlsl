@@ -74,7 +74,7 @@ void LightLoop( float3 V, PositionInputs posInput, PreLightData preLightData, BS
     // Evaluate sun shadows.
     if (_DirectionalShadowIndex >= 0)
     {
-        DirectionalLightData light = _DirectionalLightDatas[_DirectionalShadowIndex];
+        DirectionalLightData light = FetchDirectionalLight(_DirectionalShadowIndex);
 
         // TODO: this will cause us to load from the normal buffer first. Does this cause a performance problem?
         // Also, the light direction is not consistent with the sun disk highlight hack, which modifies the light vector.
@@ -95,9 +95,10 @@ void LightLoop( float3 V, PositionInputs posInput, PreLightData preLightData, BS
     int i = 0;
     for (i = 0; i < _DirectionalLightCount; ++i)
     {
-		if (IsMatchingLightLayer(_DirectionalLightDatas[i].lightLayers, builtinData.renderingLayers))
+		DirectionalLightData light = FetchDirectionalLight(i);
+		if (IsMatchingLightLayer(light.lightLayers, builtinData.renderingLayers))
 		{
-			DirectLighting lighting = EvaluateBSDF_Directional(context, V, posInput, preLightData, _DirectionalLightDatas[i], bsdfData, builtinData);
+			DirectLighting lighting = EvaluateBSDF_Directional(context, V, posInput, preLightData, light, bsdfData, builtinData);
 			AccumulateDirectLighting(lighting, aggregateLighting);
 		}
     }

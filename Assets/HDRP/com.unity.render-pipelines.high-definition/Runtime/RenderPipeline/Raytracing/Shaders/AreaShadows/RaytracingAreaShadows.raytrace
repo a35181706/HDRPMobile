@@ -85,7 +85,7 @@ void RayGenShadows()
     float3 viewWS = normalize(_WorldSpaceCameraPos - positionWS);
 
     // Fetch the data of the area light
-    LightData lightData = _LightDatas[_RaytracingTargetAreaLight];
+    LightData lightData = FetchLight(_RaytracingTargetAreaLight);
 
     // Structure that holds all the input data for the MIS
     MISSamplingInput misInput;
@@ -134,7 +134,7 @@ void RayGenShadows()
     float U = Luminance(lighting.diffuse + lighting.specular);
 
     // NOTE: Due to a VGPR optimisation in we need to restore the previous value (position, dimmer, and other thing are overriden)
-    lightData = _LightDatas[_RaytracingTargetAreaLight];
+    lightData = FetchLight(_RaytracingTargetAreaLight);
 
     // Here we need to evaluate the diffuseProbablity and the unshadowed lighting
     if(!EvaluateMISProbabilties(lighting, bsdfData.perceptualRoughness, misInput.brdfProb))
@@ -291,7 +291,7 @@ void RayGenShadowSingle()
     }
 
     // Fetch the data of the area light
-    LightData lightData = _LightDatas[_RaytracingTargetAreaLight];
+    LightData lightData = FetchLight(_RaytracingTargetAreaLight);
 
     // Compute the position input structure
     PositionInputs posInput = GetPositionInput_Stereo(currentPixelCoord, _ScreenSize.zw, depthValue, UNITY_MATRIX_I_VP, GetWorldToViewMatrix(), 0, 0);

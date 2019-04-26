@@ -1,24 +1,33 @@
+
 #ifdef SHADER_VARIABLES_INCLUDE_CB
 
 #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/ShaderVariablesLightLoop.cs.hlsl"
 
 #else
-
     #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightDefinition.cs.hlsl"
+	#define USE_PACKED_LIGHTDATA //¿ªÆôPackedLightData
 
+#ifdef USE_PACKED_LIGHTDATA
+	#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/PackedLightData.cs.hlsl"
+#endif
     // don't support Buffer yet in unity
     StructuredBuffer<uint>  g_vBigTileLightList;
     StructuredBuffer<uint>  g_vLightListGlobal;
     StructuredBuffer<uint>  g_vLayeredOffsetsBuffer;
     StructuredBuffer<float> g_logBaseBuffer;
 
-    #ifdef USE_INDIRECT
+#ifdef USE_INDIRECT
         StructuredBuffer<uint> g_TileFeatureFlags;
-    #endif
+#endif
 
-    StructuredBuffer<DirectionalLightData> _DirectionalLightDatas;
-    StructuredBuffer<LightData>            _LightDatas;
-    StructuredBuffer<EnvLightData>         _EnvLightDatas;
+
+#ifdef USE_PACKED_LIGHTDATA
+		StructuredBuffer<PackedLightData> _PackedLightDatas;
+#else
+		StructuredBuffer<DirectionalLightData> _DirectionalLightDatas;
+		StructuredBuffer<LightData>            _LightDatas;
+		StructuredBuffer<EnvLightData>         _EnvLightDatas;
+#endif
 
     // Used by directional and spot lights
     TEXTURE2D_ARRAY(_CookieTextures);

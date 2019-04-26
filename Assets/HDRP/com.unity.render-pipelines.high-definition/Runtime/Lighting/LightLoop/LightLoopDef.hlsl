@@ -1,5 +1,140 @@
 #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoop.cs.hlsl"
 
+#ifdef USE_PACKED_LIGHTDATA
+#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/PackedLightData.cs.hlsl"
+
+DirectionalLightData UnPackedLightDataToDirectionalLightData(PackedLightData data)
+{
+	DirectionalLightData outData;
+	ZERO_INITIALIZE(DirectionalLightData, outData);
+
+	outData.positionRWS = data.packedData1;
+	outData.lightLayers = asuint(data.packedData1.w);
+
+	outData.forward = data.packedData2;
+	outData.lightDimmer = data.packedData2.w;
+
+	outData.right = data.packedData3;
+	outData.volumetricLightDimmer = data.packedData3.w;
+
+	outData.up = data.packedData4;
+	outData.angleScale = data.packedData4.w;
+
+	outData.color = data.packedData5;
+	outData.angleOffset = data.packedData5.w;
+
+	outData.shadowMaskSelector = data.packedData6;
+
+	outData.cookieIndex = asuint(data.packedData7.x);
+	outData.tileCookie = asuint(data.packedData7.y);
+	outData.shadowIndex = asuint(data.packedData7.z);
+	outData.contactShadowIndex = asuint(data.packedData7.w);
+
+	outData.shadowDimmer = data.packedData8.x;
+	outData.volumetricShadowDimmer = data.packedData8.y;
+	outData.nonLightMappedOnly = asuint(data.packedData8.z);
+	outData.minRoughness = data.packedData8.w;
+
+	outData.diffuseDimmer = data.packedData9.x;
+	outData.specularDimmer = data.packedData9.y;
+
+	return outData;
+}
+
+EnvLightData UnPackedLightDataToEnvLightData(PackedLightData data)
+{
+	EnvLightData outData;
+	ZERO_INITIALIZE(EnvLightData, outData);
+
+	outData.capturePositionRWS = data.packedData1;
+	outData.lightLayers = asuint(data.packedData1.w);
+
+	outData.proxyForward = data.packedData2;
+	outData.influenceShapeType = asuint(data.packedData2.w);
+
+	outData.proxyRight = data.packedData3;
+	outData.minProjectionDistance = data.packedData3.w;
+
+	outData.proxyUp = data.packedData4;
+	outData.weight = data.packedData4.w;
+
+	outData.proxyExtents = data.packedData5;
+	outData.multiplier = data.packedData5.w;
+
+	outData.influencePositionRWS = data.packedData6;
+	outData.envIndex = asuint(data.packedData6.w);
+
+	outData.influenceForward = data.packedData7;
+	outData.boxSideFadeNegative.x = data.packedData7.w;
+
+	outData.influenceUp = data.packedData8;
+	outData.boxSideFadeNegative.y = data.packedData8.w;
+
+	outData.influenceRight = data.packedData9;
+	outData.boxSideFadeNegative.z = data.packedData9.w;
+
+	outData.influenceExtents = data.packedData10;
+	outData.boxSideFadePositive.x = data.packedData10.w;
+
+	outData.blendDistancePositive = data.packedData11;
+	outData.boxSideFadePositive.y = data.packedData11.w;
+
+	outData.blendDistanceNegative = data.packedData12;
+	outData.boxSideFadePositive.z = data.packedData12.w;
+
+	outData.blendNormalDistancePositive = data.packedData13;
+
+	outData.blendNormalDistanceNegative = data.packedData14;
+
+	return outData;
+}
+
+LightData UnPackedLightDataToLightData(PackedLightData data)
+{
+	LightData outData;
+	ZERO_INITIALIZE(LightData, outData);
+
+	outData.positionRWS = data.packedData1;
+	outData.lightLayers = asuint(data.packedData1.w);
+
+	outData.forward = data.packedData2;
+	outData.lightDimmer = data.packedData2.w;
+
+	outData.right = data.packedData3;
+	outData.volumetricLightDimmer = data.packedData3.w;
+
+	outData.up = data.packedData4;
+	outData.angleScale = data.packedData4.w;
+
+	outData.color = data.packedData5;
+	outData.angleOffset = data.packedData5.w;
+
+	outData.shadowMaskSelector = data.packedData6;
+
+	outData.lightType = asuint(data.packedData7.x);
+	outData.range = data.packedData7.y;
+	outData.rangeAttenuationScale = data.packedData7.z;
+	outData.rangeAttenuationBias = data.packedData7.w;
+
+	outData.cookieIndex = asuint(data.packedData8.x);
+	outData.tileCookie = asuint(data.packedData8.y);
+	outData.shadowIndex = asuint(data.packedData8.z);
+	outData.contactShadowIndex = asuint(data.packedData8.w);
+
+	outData.shadowDimmer = data.packedData9.x;
+	outData.volumetricShadowDimmer = data.packedData9.y;
+	outData.nonLightMappedOnly = asuint(data.packedData9.z);
+	outData.minRoughness = data.packedData9.w;
+
+	outData.size = data.packedData10;
+	outData.diffuseDimmer = data.packedData10.z;
+	outData.specularDimmer = asuint(data.packedData10.w);
+
+	return outData;
+}
+
+#endif
+
 #define DWORD_PER_TILE 16 // See dwordsPerTile in LightLoop.cs, we have roomm for 31 lights and a number of light value all store on 16 bit (ushort)
 
 // LightLoopContext is not visible from Material (user should not use these properties in Material file)
@@ -273,24 +408,48 @@ LightData FetchLight(uint start, uint i)
 {
     uint j = FetchIndex(start, i);
 
-    return _LightDatas[j];
+#ifdef USE_PACKED_LIGHTDATA
+	return UnPackedLightDataToLightData(_PackedLightDatas[_DirectionalLightCount + j]);
+#else
+	return _LightDatas[j];
+#endif
 }
 
 LightData FetchLight(uint index)
 {
-    return _LightDatas[index];
+#ifdef USE_PACKED_LIGHTDATA
+	return UnPackedLightDataToLightData(_PackedLightDatas[_DirectionalLightCount + index]);
+#else
+	return _LightDatas[index];
+#endif
 }
 
 EnvLightData FetchEnvLight(uint start, uint i)
 {
     int j = FetchIndex(start, i);
-
-    return _EnvLightDatas[j];
+#ifdef USE_PACKED_LIGHTDATA
+	return UnPackedLightDataToEnvLightData(_PackedLightDatas[_DirectionalLightCount + _PunctualLightCount  + j]);
+#else
+	return _EnvLightDatas[j];
+#endif
 }
 
 EnvLightData FetchEnvLight(uint index)
 {
-    return _EnvLightDatas[index];
+#ifdef USE_PACKED_LIGHTDATA
+	return UnPackedLightDataToEnvLightData(_PackedLightDatas[_DirectionalLightCount + _PunctualLightCount + index]);
+#else
+	return _EnvLightDatas[index];
+#endif
+}
+
+DirectionalLightData FetchDirectionalLight(uint index)
+{
+#ifdef USE_PACKED_LIGHTDATA
+	return UnPackedLightDataToDirectionalLightData(_PackedLightDatas[index]);
+#else
+	return _DirectionalLightDatas[index];
+#endif
 }
 
 // We always fetch the screen space shadow texture to reduce the number of shader variant, overhead is negligible,

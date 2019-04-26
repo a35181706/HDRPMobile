@@ -168,7 +168,7 @@ VoxelLighting EvaluateVoxelLightingDirectional(LightLoopContext context, uint fe
     // Evaluate sun shadows.
     if (_DirectionalShadowIndex >= 0)
     {
-        DirectionalLightData light = _DirectionalLightDatas[_DirectionalShadowIndex];
+        DirectionalLightData light = FetchDirectionalLight(_DirectionalShadowIndex);
 
         // Prep the light so that it works with non-volumetrics-specific code.
         light.contactShadowIndex = -1;
@@ -185,7 +185,7 @@ VoxelLighting EvaluateVoxelLightingDirectional(LightLoopContext context, uint fe
 
     for (uint i = 0; i < _DirectionalLightCount; ++i)
     {
-        DirectionalLightData light = _DirectionalLightDatas[i];
+        DirectionalLightData light = FetchDirectionalLight(i);
 
         // Prep the light so that it works with non-volumetrics-specific code.
         light.contactShadowIndex = -1;
@@ -246,7 +246,7 @@ VoxelLighting EvaluateVoxelLightingLocal(LightLoopContext context, uint featureF
         for (; lightOffset < lightCount; lightOffset++)
         {
             uint lightIndex = FetchIndex(lightStart, lightOffset);
-            LightData light = _LightDatas[lightIndex];
+            LightData light = FetchLight(lightIndex);
 
             if (light.lightType >= GPULIGHTTYPE_PROJECTOR_BOX) { break; }
 
@@ -344,7 +344,7 @@ VoxelLighting EvaluateVoxelLightingLocal(LightLoopContext context, uint featureF
         for (; lightOffset < lightCount; lightOffset++)
         {
             uint lightIndex = FetchIndex(lightStart, lightOffset);
-            LightData light = _LightDatas[lightIndex];
+            LightData light = FetchLight(lightIndex);
 
             if (light.lightType != GPULIGHTTYPE_PROJECTOR_BOX) { break; }
 

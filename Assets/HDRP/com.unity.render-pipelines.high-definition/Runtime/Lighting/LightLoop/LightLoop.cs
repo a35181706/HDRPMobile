@@ -1,3 +1,4 @@
+#define USE_PACKED_LIGHTDATA
 using System;
 using System.Collections.Generic;
 using UnityEngine.Rendering;
@@ -187,11 +188,19 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         public int m_MaxLightsOnScreen;
         public int m_MaxEnvLightsOnScreen;
 
+#if !USE_PACKED_LIGHTDATA
         // Static keyword is required here else we get a "DestroyBuffer can only be called from the main thread"
         ComputeBuffer m_DirectionalLightDatas = null;
         public ComputeBuffer directionalLightDatas { get { return m_DirectionalLightDatas; } }
         ComputeBuffer m_LightDatas = null;
         ComputeBuffer m_EnvLightDatas = null;
+#else
+        ComputeBuffer m_packedLightDatas = null;
+        List<PackedLightData> m_pakcedLightList = null;
+#endif
+
+
+
         ComputeBuffer m_DecalDatas = null;
 
         Texture2DArray  m_DefaultTexture2DArray;
@@ -286,7 +295,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
         // This value is used to compute the area shadow when using raytracing by the HDRaytracingShadowManager
         public int areaLightCount { get { return m_areaLightCount; } }
-        public ComputeBuffer lightDatas { get { return m_LightDatas; } }
+       // public ComputeBuffer lightDatas { get { return m_LightDatas; } }
 
         private ComputeShader buildScreenAABBShader { get { return m_Resources.shaders.buildScreenAABBCS; } }
         private ComputeShader buildPerTileLightListShader { get { return m_Resources.shaders.buildPerTileLightListCS; } }
@@ -596,12 +605,18 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 s_shadeOpaqueIndirectShadowMaskFptlKernels[variant] = deferredComputeShader.FindKernel("Deferred_Indirect_ShadowMask_Fptl_Variant" + variant);
             }
 
+#if !USE_PACKED_LIGHTDATA
             // All the allocation of the compute buffers need to happend after the kernel finding in order to avoid the leek loop when a shader does not compile or is not available
             m_DirectionalLightDatas = new ComputeBuffer(m_MaxDirectionalLightsOnScreen, System.Runtime.InteropServices.Marshal.SizeOf(typeof(DirectionalLightData)));
             m_LightDatas = new ComputeBuffer(m_MaxPunctualLightsOnScreen + m_MaxAreaLightsOnScreen, System.Runtime.InteropServices.Marshal.SizeOf(typeof(LightData)));
             m_EnvLightDatas = new ComputeBuffer(m_MaxEnvLightsOnScreen, System.Runtime.InteropServices.Marshal.SizeOf(typeof(EnvLightData)));
+            
+#else
+            m_packedLightDatas = new ComputeBuffer(m_MaxLightsOnScreen,
+                                                  System.Runtime.InteropServices.Marshal.SizeOf(typeof(PackedLightData)));
+            m_pakcedLightList = new List<PackedLightData>(m_MaxLightsOnScreen);
+#endif
             m_DecalDatas = new ComputeBuffer(m_MaxDecalsOnScreen, System.Runtime.InteropServices.Marshal.SizeOf(typeof(DecalData)));
-
             s_GlobalLightListAtomic = new ComputeBuffer(1, sizeof(uint));
 
             s_LightList = null;
@@ -684,10 +699,15 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
             CoreUtils.Destroy(m_DefaultTexture2DArray);
             CoreUtils.Destroy(m_DefaultTextureCube);
-
+#if !USE_PACKED_LIGHTDATA
             CoreUtils.SafeRelease(m_DirectionalLightDatas);
             CoreUtils.SafeRelease(m_LightDatas);
             CoreUtils.SafeRelease(m_EnvLightDatas);
+#else
+            CoreUtils.SafeRelease(m_packedLightDatas);
+            m_pakcedLightList.Clear();
+#endif
+
             CoreUtils.SafeRelease(m_DecalDatas);
 
             if (m_ReflectionProbeCache != null)
@@ -843,23 +863,24 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             const int capacityUShortsPerTile = 32;
             const int dwordsPerTile = (capacityUShortsPerTile + 1) >> 1;        // room for 31 lights and a nrLights value.
 
-            s_LightList = new ComputeBuffer((int)LightCategory.Count * dwordsPerTile * nrTiles, sizeof(uint));       // enough list memory for a 4k x 4k display
+            int lightListCout = (int)LightCategory.Count * dwordsPerTile * nrTiles;
+            
+            s_LightList = new ComputeBuffer(lightListCout, sizeof(uint));       // enough list memory for a 4k x 4k display
             s_TileList = new ComputeBuffer((int)LightDefinitions.s_NumFeatureVariants * nrTiles, sizeof(uint));
             s_TileFeatureFlags = new ComputeBuffer(nrTiles, sizeof(uint));
 
             // Cluster
+            var nrClustersX = (width + LightDefinitions.s_TileSizeClustered - 1) / LightDefinitions.s_TileSizeClustered;
+            var nrClustersY = (height + LightDefinitions.s_TileSizeClustered - 1) / LightDefinitions.s_TileSizeClustered;
+            var nrClusterTiles = nrClustersX * nrClustersY * m_MaxViewCount;
+            int PerVoxellightListCout = NumLightIndicesPerClusteredTile() * nrClusterTiles;
+
+            s_PerVoxelOffset = new ComputeBuffer((int)LightCategory.Count * (1 << k_Log2NumClusters) * nrClusterTiles, sizeof(uint));
+            s_PerVoxelLightLists = new ComputeBuffer(PerVoxellightListCout, sizeof(uint));
+
+            if (k_UseDepthBuffer)
             {
-                var nrClustersX = (width + LightDefinitions.s_TileSizeClustered - 1) / LightDefinitions.s_TileSizeClustered;
-                var nrClustersY = (height + LightDefinitions.s_TileSizeClustered - 1) / LightDefinitions.s_TileSizeClustered;
-                var nrClusterTiles = nrClustersX * nrClustersY * m_MaxViewCount;
-
-                s_PerVoxelOffset = new ComputeBuffer((int)LightCategory.Count * (1 << k_Log2NumClusters) * nrClusterTiles, sizeof(uint));
-                s_PerVoxelLightLists = new ComputeBuffer(NumLightIndicesPerClusteredTile() * nrClusterTiles, sizeof(uint));
-
-                if (k_UseDepthBuffer)
-                {
-                    s_PerTileLogBaseTweak = new ComputeBuffer(nrClusterTiles, sizeof(float));
-                }
+                s_PerTileLogBaseTweak = new ComputeBuffer(nrClusterTiles, sizeof(float));
             }
 
             if (m_FrameSettings.IsEnabled(FrameSettingsField.BigTilePrepass))
@@ -1273,7 +1294,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 #else
             // fix up shadow information
             lightData.shadowIndex = shadowIndex;
-            #endif
+#endif
             // Value of max smoothness is from artists point of view, need to convert from perceptual smoothness to roughness
             lightData.minRoughness = (1.0f - additionalLightData.maxSmoothness) * (1.0f - additionalLightData.maxSmoothness);
 
@@ -1770,9 +1791,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         public bool PrepareLightsForGPU(CommandBuffer cmd, HDCamera hdCamera, CullingResults cullResults,
             HDProbeCullingResults hdProbeCullingResults, DensityVolumeList densityVolumes, DebugDisplaySettings debugDisplaySettings)
         {
-        #if ENABLE_RAYTRACING
+#if ENABLE_RAYTRACING
             HDRaytracingEnvironment raytracingEnv = m_RayTracingManager.CurrentEnvironment();
-        #endif
+#endif
 
             using (new ProfilingSample(cmd, "Prepare Lights For GPU"))
             {
@@ -1934,10 +1955,10 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                     // 2. Go through all lights, convert them to GPU format.
                     // Simultaneously create data for culling (LightVolumeData and SFiniteLightBound)
 
-                    #if ENABLE_RAYTRACING
+#if ENABLE_RAYTRACING
                     int areaLightShadowIndex = 0;
                     int maxAreaLightShadows = raytracingEnv != null && raytracingEnv.raytracedShadows ? raytracingEnv.numAreaLightShadows : 0;
-                    #endif
+#endif
 
                     for (int sortIndex = 0; sortIndex < sortCount; ++sortIndex)
                     {
@@ -1960,11 +1981,11 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         int shadowIndex = -1;
 
                         // Manage shadow requests
-                        #if ENABLE_RAYTRACING
+#if ENABLE_RAYTRACING
                         if (additionalLightData.WillRenderShadows() && !additionalLightData.useRayTracedShadows)
-                        #else
+#else
                         if (additionalLightData.WillRenderShadows())
-                        #endif
+#endif
                         {
                                 int shadowRequestCount;
                             shadowIndex = additionalLightData.UpdateShadowRequest(hdCamera, m_ShadowManager, light, cullResults, lightIndex, out shadowRequestCount);
@@ -2005,9 +2026,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
                         // Punctual, area, projector lights - the rendering side.
                         if (GetLightData(cmd, hdShadowSettings, camera, gpuLightType, light, lightComponent, additionalLightData, additionalShadowData, lightIndex, shadowIndex, ref lightDimensions, debugDisplaySettings
-                        #if ENABLE_RAYTRACING
+#if ENABLE_RAYTRACING
                             , maxAreaLightShadows, ref areaLightShadowIndex
-                        #endif
+#endif
                         ))
                         {
                             switch (lightCategory)
@@ -2587,9 +2608,32 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         }
         void UpdateDataBuffers()
         {
+#if !USE_PACKED_LIGHTDATA
             m_DirectionalLightDatas.SetData(m_lightList.directionalLights);
             m_LightDatas.SetData(m_lightList.lights);
             m_EnvLightDatas.SetData(m_lightList.envLights);
+#else
+            m_pakcedLightList.Clear();
+            //先dir，他们使用到的机会是依次递减
+            foreach(var light in m_lightList.directionalLights)
+            {
+                m_pakcedLightList.Add(GPUDataPackedUtils.ToPackedLightData(light));
+            }
+
+            //再light
+            foreach (var light in m_lightList.lights)
+            {
+                m_pakcedLightList.Add(GPUDataPackedUtils.ToPackedLightData(light));
+            }
+
+            //再env，
+            foreach (var light in m_lightList.envLights)
+            {
+                m_pakcedLightList.Add(GPUDataPackedUtils.ToPackedLightData(light));
+            }
+
+            m_packedLightDatas.SetData(m_pakcedLightList);
+#endif
             m_DecalDatas.SetData(DecalSystem.m_DecalDatas, 0, 0, Math.Min(DecalSystem.m_DecalDatasCount, m_MaxDecalsOnScreen)); // don't add more than the size of the buffer
 
             // These two buffers have been set in Rebuild()
@@ -2630,12 +2674,16 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 cmd.SetGlobalMatrixArray(HDShaderIDs._Env2DCaptureVP, m_Env2DCaptureVP);
                 cmd.SetGlobalFloatArray(HDShaderIDs._Env2DCaptureForward, m_Env2DCaptureForward);
 
+#if !USE_PACKED_LIGHTDATA
                 cmd.SetGlobalBuffer(HDShaderIDs._DirectionalLightDatas, m_DirectionalLightDatas);
-                cmd.SetGlobalInt(HDShaderIDs._DirectionalLightCount, m_lightList.directionalLights.Count);
                 cmd.SetGlobalBuffer(HDShaderIDs._LightDatas, m_LightDatas);
+                cmd.SetGlobalBuffer(HDShaderIDs._EnvLightDatas, m_EnvLightDatas);
+#else
+                cmd.SetGlobalBuffer(HDShaderIDs._PackedLightDatas, m_packedLightDatas);
+#endif
+                cmd.SetGlobalInt(HDShaderIDs._DirectionalLightCount, m_lightList.directionalLights.Count);
                 cmd.SetGlobalInt(HDShaderIDs._PunctualLightCount, m_punctualLightCount);
                 cmd.SetGlobalInt(HDShaderIDs._AreaLightCount, m_areaLightCount);
-                cmd.SetGlobalBuffer(HDShaderIDs._EnvLightDatas, m_EnvLightDatas);
                 cmd.SetGlobalInt(HDShaderIDs._EnvLightCount, m_lightList.envLights.Count);
                 cmd.SetGlobalBuffer(HDShaderIDs._DecalDatas, m_DecalDatas);
                 cmd.SetGlobalInt(HDShaderIDs._DecalCount, DecalSystem.m_DecalDatasCount);
