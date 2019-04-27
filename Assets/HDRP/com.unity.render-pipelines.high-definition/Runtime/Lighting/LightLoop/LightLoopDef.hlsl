@@ -8,31 +8,31 @@ DirectionalLightData UnPackedLightDataToDirectionalLightData(PackedLightData dat
 	DirectionalLightData outData;
 	ZERO_INITIALIZE(DirectionalLightData, outData);
 
-	outData.positionRWS = data.packedData1;
-	outData.lightLayers = asuint(data.packedData1.w);
+	outData.positionRWS = data.packedData1.xyz;
+	outData.lightLayers = int(data.packedData1.w);
 
-	outData.forward = data.packedData2;
+	outData.forward = data.packedData2.xyz;
 	outData.lightDimmer = data.packedData2.w;
 
-	outData.right = data.packedData3;
+	outData.right = data.packedData3.xyz;
 	outData.volumetricLightDimmer = data.packedData3.w;
 
-	outData.up = data.packedData4;
+	outData.up = data.packedData4.xyz;
 	outData.angleScale = data.packedData4.w;
 
-	outData.color = data.packedData5;
+	outData.color = data.packedData5.xyz;
 	outData.angleOffset = data.packedData5.w;
 
 	outData.shadowMaskSelector = data.packedData6;
 
-	outData.cookieIndex = asuint(data.packedData7.x);
-	outData.tileCookie = asuint(data.packedData7.y);
-	outData.shadowIndex = asuint(data.packedData7.z);
-	outData.contactShadowIndex = asuint(data.packedData7.w);
+	outData.cookieIndex = int(data.packedData7.x);
+	outData.tileCookie = int(data.packedData7.y);
+	outData.shadowIndex = int(data.packedData7.z);
+	outData.contactShadowIndex = int(data.packedData7.w);
 
 	outData.shadowDimmer = data.packedData8.x;
 	outData.volumetricShadowDimmer = data.packedData8.y;
-	outData.nonLightMappedOnly = asuint(data.packedData8.z);
+	outData.nonLightMappedOnly = int(data.packedData8.z);
 	outData.minRoughness = data.packedData8.w;
 
 	outData.diffuseDimmer = data.packedData9.x;
@@ -46,45 +46,45 @@ EnvLightData UnPackedLightDataToEnvLightData(PackedLightData data)
 	EnvLightData outData;
 	ZERO_INITIALIZE(EnvLightData, outData);
 
-	outData.capturePositionRWS = data.packedData1;
-	outData.lightLayers = asuint(data.packedData1.w);
+	outData.capturePositionRWS = data.packedData1.xyz;
+	outData.lightLayers = int(data.packedData1.w);
 
-	outData.proxyForward = data.packedData2;
-	outData.influenceShapeType = asuint(data.packedData2.w);
+	outData.proxyForward = data.packedData2.xyz;
+	outData.influenceShapeType = int(data.packedData2.w);
 
-	outData.proxyRight = data.packedData3;
+	outData.proxyRight = data.packedData3.xyz;
 	outData.minProjectionDistance = data.packedData3.w;
 
-	outData.proxyUp = data.packedData4;
+	outData.proxyUp = data.packedData4.xyz;
 	outData.weight = data.packedData4.w;
 
-	outData.proxyExtents = data.packedData5;
+	outData.proxyExtents = data.packedData5.xyz;
 	outData.multiplier = data.packedData5.w;
 
-	outData.influencePositionRWS = data.packedData6;
-	outData.envIndex = asuint(data.packedData6.w);
+	outData.influencePositionRWS = data.packedData6.xyz;
+	outData.envIndex = int(data.packedData6.w);
 
-	outData.influenceForward = data.packedData7;
+	outData.influenceForward = data.packedData7.xyz;
 	outData.boxSideFadeNegative.x = data.packedData7.w;
 
-	outData.influenceUp = data.packedData8;
+	outData.influenceUp = data.packedData8.xyz;
 	outData.boxSideFadeNegative.y = data.packedData8.w;
 
-	outData.influenceRight = data.packedData9;
+	outData.influenceRight = data.packedData9.xyz;
 	outData.boxSideFadeNegative.z = data.packedData9.w;
 
-	outData.influenceExtents = data.packedData10;
+	outData.influenceExtents = data.packedData10.xyz;
 	outData.boxSideFadePositive.x = data.packedData10.w;
 
-	outData.blendDistancePositive = data.packedData11;
+	outData.blendDistancePositive = data.packedData11.xyz;
 	outData.boxSideFadePositive.y = data.packedData11.w;
 
-	outData.blendDistanceNegative = data.packedData12;
+	outData.blendDistanceNegative = data.packedData12.xyz;
 	outData.boxSideFadePositive.z = data.packedData12.w;
 
-	outData.blendNormalDistancePositive = data.packedData13;
+	outData.blendNormalDistancePositive = data.packedData13.xyz;
 
-	outData.blendNormalDistanceNegative = data.packedData14;
+	outData.blendNormalDistanceNegative = data.packedData14.xyz;
 
 	return outData;
 }
@@ -94,41 +94,41 @@ LightData UnPackedLightDataToLightData(PackedLightData data)
 	LightData outData;
 	ZERO_INITIALIZE(LightData, outData);
 
-	outData.positionRWS = data.packedData1;
-	outData.lightLayers = asuint(data.packedData1.w);
+	outData.positionRWS = data.packedData1.xyz;
+	outData.lightLayers = int(data.packedData1.w);
 
-	outData.forward = data.packedData2;
+	outData.forward = data.packedData2.xyz;
 	outData.lightDimmer = data.packedData2.w;
 
-	outData.right = data.packedData3;
+	outData.right = data.packedData3.xyz;
 	outData.volumetricLightDimmer = data.packedData3.w;
 
-	outData.up = data.packedData4;
+	outData.up = data.packedData4.xyz;
 	outData.angleScale = data.packedData4.w;
 
-	outData.color = data.packedData5;
+	outData.color = data.packedData5.xyz;
 	outData.angleOffset = data.packedData5.w;
 
 	outData.shadowMaskSelector = data.packedData6;
 
-	outData.lightType = asuint(data.packedData7.x);
+	outData.lightType = int(data.packedData7.x);
 	outData.range = data.packedData7.y;
 	outData.rangeAttenuationScale = data.packedData7.z;
 	outData.rangeAttenuationBias = data.packedData7.w;
 
-	outData.cookieIndex = asuint(data.packedData8.x);
-	outData.tileCookie = asuint(data.packedData8.y);
-	outData.shadowIndex = asuint(data.packedData8.z);
-	outData.contactShadowIndex = asuint(data.packedData8.w);
+	outData.cookieIndex = int(data.packedData8.x);
+	outData.tileCookie = int(data.packedData8.y);
+	outData.shadowIndex = int(data.packedData8.z);
+	outData.contactShadowIndex = int(data.packedData8.w);
 
 	outData.shadowDimmer = data.packedData9.x;
 	outData.volumetricShadowDimmer = data.packedData9.y;
-	outData.nonLightMappedOnly = asuint(data.packedData9.z);
+	outData.nonLightMappedOnly = int(data.packedData9.z);
 	outData.minRoughness = data.packedData9.w;
 
-	outData.size = data.packedData10;
+	outData.size = data.packedData10.xy;
 	outData.diffuseDimmer = data.packedData10.z;
-	outData.specularDimmer = asuint(data.packedData10.w);
+	outData.specularDimmer = data.packedData10.w;
 
 	return outData;
 }
@@ -446,7 +446,7 @@ EnvLightData FetchEnvLight(uint index)
 DirectionalLightData FetchDirectionalLight(uint index)
 {
 #ifdef USE_PACKED_LIGHTDATA
-	return UnPackedLightDataToDirectionalLightData(_PackedLightDatas[index]);
+	return UnPackedLightDataToDirectionalLightData(_PackedLightDatas[0]);
 #else
 	return _DirectionalLightDatas[index];
 #endif

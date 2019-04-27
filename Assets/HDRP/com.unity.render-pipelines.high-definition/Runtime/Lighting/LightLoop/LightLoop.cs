@@ -2613,7 +2613,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             m_LightDatas.SetData(m_lightList.lights);
             m_EnvLightDatas.SetData(m_lightList.envLights);
 #else
-            m_pakcedLightList.Clear();
+            m_pakcedLightList.Clear();//为了避免数组越界，这里需要填充所有的light
             //先dir，他们使用到的机会是依次递减
             foreach(var light in m_lightList.directionalLights)
             {

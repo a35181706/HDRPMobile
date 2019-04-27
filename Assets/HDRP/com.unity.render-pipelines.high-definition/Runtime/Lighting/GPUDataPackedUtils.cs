@@ -7,13 +7,13 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
     /// </summary>
     public class GPUDataPackedUtils
     {
-        const float Epsilon = 0.0000001f;
+        const float Epsilon = 0.0001f;
 
         public static PackedLightData ToPackedLightData(LightData data)
         {
             PackedLightData outData = default(PackedLightData);
             outData.packedData1 = data.positionRWS;
-            outData.packedData1.w = data.lightLayers;
+            outData.packedData1.w = (float)data.lightLayers + Epsilon; //防止1，转换为float变成0.999999999998;
 
             outData.packedData2 = data.forward;
             outData.packedData2.w = data.lightDimmer;
@@ -29,19 +29,19 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
             outData.packedData6 = data.shadowMaskSelector;
 
-            outData.packedData7.x = (int)data.lightType + Epsilon; //防止1，转换为float变成0.999999999998;
+            outData.packedData7.x = (float)(int)data.lightType + Epsilon; //防止1，转换为float变成0.999999999998;
             outData.packedData7.y = data.range;
             outData.packedData7.z = data.rangeAttenuationScale;
             outData.packedData7.w = data.rangeAttenuationBias;
 
-            outData.packedData8.x = data.cookieIndex;
-            outData.packedData8.y = data.tileCookie;
-            outData.packedData8.z = data.shadowIndex;
-            outData.packedData8.w = data.contactShadowIndex;
+            outData.packedData8.x = (float)data.cookieIndex + Epsilon; //防止1，转换为float变成0.999999999998;
+            outData.packedData8.y = (float)data.tileCookie + Epsilon; //防止1，转换为float变成0.999999999998;
+            outData.packedData8.z = (float)data.shadowIndex + Epsilon; //防止1，转换为float变成0.999999999998;
+            outData.packedData8.w = (float)data.contactShadowIndex + Epsilon; //防止1，转换为float变成0.999999999998;
 
             outData.packedData9.x = data.shadowDimmer;
             outData.packedData9.y = data.volumetricShadowDimmer;
-            outData.packedData9.z = data.nonLightMappedOnly;
+            outData.packedData9.z = (float)data.nonLightMappedOnly + Epsilon; //防止1，转换为float变成0.999999999998;
             outData.packedData9.w = data.minRoughness;
 
             outData.packedData10 = data.size;
@@ -61,7 +61,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         {
             PackedLightData outData = default(PackedLightData);
             outData.packedData1 = data.capturePositionRWS;
-            outData.packedData1.w = data.lightLayers;
+            outData.packedData1.w = (float)data.lightLayers + Epsilon; //防止1，转换为float变成0.999999999998;
 
             outData.packedData2 = data.proxyForward;
             outData.packedData2.w = (int)data.influenceShapeType + Epsilon; //防止1，转换为float变成0.999999999998;
@@ -76,7 +76,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             outData.packedData5.w = data.multiplier;
 
             outData.packedData6 = data.influencePositionRWS;
-            outData.packedData6.w = data.envIndex;
+            outData.packedData6.w = data.envIndex + Epsilon; //防止1，转换为float变成0.999999999998;
 
             outData.packedData7 = data.influenceForward;
             outData.packedData7.w = data.boxSideFadeNegative.x;
@@ -109,7 +109,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         {
             PackedLightData outData = default(PackedLightData);
             outData.packedData1 = data.positionRWS;
-            outData.packedData1.w = data.lightLayers;
+            outData.packedData1.w = (float)data.lightLayers + Epsilon; //防止1，转换为float变成0.999999999998;
 
             outData.packedData2 = data.forward;
             outData.packedData2.w = data.lightDimmer;
@@ -125,27 +125,23 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
             outData.packedData6 = data.shadowMaskSelector;
 
-            outData.packedData7.x = data.cookieIndex;
-            outData.packedData7.y = data.tileCookie;
-            outData.packedData7.z = data.shadowIndex;
-            outData.packedData7.w = data.contactShadowIndex;
+            outData.packedData7.x = (float)data.cookieIndex + Epsilon; //防止1，转换为float变成0.999999999998;
+            outData.packedData7.y = (float)data.tileCookie + Epsilon; //防止1，转换为float变成0.999999999998;
+            outData.packedData7.z = (float)data.shadowIndex + Epsilon; //防止1，转换为float变成0.999999999998;
+            outData.packedData7.w = (float)data.contactShadowIndex + Epsilon; //防止1，转换为float变成0.999999999998;
 
             outData.packedData8.x = data.shadowDimmer;
             outData.packedData8.y = data.volumetricShadowDimmer;
-            outData.packedData8.z = data.nonLightMappedOnly;
+            outData.packedData8.z = (float)data.nonLightMappedOnly + Epsilon; //防止1，转换为float变成0.999999999998;
             outData.packedData8.w = data.minRoughness;
 
-            outData.packedData9.x = data.shadowDimmer;
-            outData.packedData9.y = data.volumetricShadowDimmer;
-            outData.packedData9.z = data.nonLightMappedOnly;
-            outData.packedData9.w = data.minRoughness;
-
-            outData.packedData10.x = data.diffuseDimmer;
-            outData.packedData10.y = data.specularDimmer;
-            outData.packedData10.z = 0;
-            outData.packedData10.w = 0;
+            outData.packedData9.x = data.diffuseDimmer;
+            outData.packedData9.y = data.specularDimmer;
+            outData.packedData9.z = 0;
+            outData.packedData9.w = 0;
 
             //not use
+            outData.packedData10 = Vector4.zero;
             outData.packedData11 = Vector4.zero;
             outData.packedData12 = Vector4.zero;
             outData.packedData13 = Vector4.zero;
@@ -274,7 +270,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
             outData.size = data.packedData10;
             outData.diffuseDimmer = data.packedData10.z;
-            outData.specularDimmer = (int)data.packedData10.w;
+            outData.specularDimmer = data.packedData10.w;
 
             return outData;
         }

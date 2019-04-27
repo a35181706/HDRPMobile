@@ -11,7 +11,7 @@ void GetPreIntegratedFGDGGXAndDisneyDiffuse(float NdotV, float perceptualRoughne
 #if FLIP_N_DOT_V
 	NdotV = -NdotV;
 #endif
-    float2 coordLUT = Remap01ToHalfTexelCoord(float2(sqrt(NdotV), perceptualRoughness), FGDTEXTURE_RESOLUTION);
+    float2 coordLUT = Remap01ToHalfTexelCoord(float2(sqrt(NdotV), perceptualRoughness), FGDTEXTURE_RESOLUTION).xy;
 
     float3 preFGD = SAMPLE_TEXTURE2D_LOD(_PreIntegratedFGD_GGXDisneyDiffuse, s_linear_clamp_sampler, coordLUT, 0).xyz;
 
