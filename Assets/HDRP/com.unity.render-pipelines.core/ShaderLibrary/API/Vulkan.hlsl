@@ -17,13 +17,21 @@
 
 #define PLATFORM_SUPPORTS_EXPLICIT_BINDING 1
 #define PLATFORM_NEEDS_UNORM_UAV_SPECIFIER 1
-
 // flow control attributes
 #define UNITY_BRANCH        [branch]
 #define UNITY_FLATTEN       [flatten]
 #define UNITY_UNROLL        [unroll]
 #define UNITY_UNROLLX(_x)   [unroll(_x)]
 #define UNITY_LOOP          [loop]
+
+#if SHADER_API_MOBILE
+
+#define FLIP_N_DOT_V 1
+
+#endif
+
+#define asint int
+#define asuint uint
 
 // Initialize arbitrary structure with zero values.
 // Do not exist on some platform, in this case we need to have a standard name that call a function that will initialize all parameters to 0
@@ -156,7 +164,3 @@
 #define GATHER_BLUE_TEXTURE2D(textureName, samplerName, coord2)           textureName.GatherBlue(samplerName, coord2)
 #define GATHER_ALPHA_TEXTURE2D(textureName, samplerName, coord2)          textureName.GatherAlpha(samplerName, coord2)
 
-#if SHADER_API_MOBILE
-#define FLIP_N_DOT_V 1
-#define FLIP_NORMAL_Z 1
-#endif

@@ -1,3 +1,4 @@
+#define USE_PACKED_SHADOWDATA
 using System;
 using System.Collections.Generic;
 using UnityEngine.Rendering;
@@ -181,12 +182,17 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         List<HDShadowData>          m_ShadowDatas = new List<HDShadowData>();
         HDShadowRequest[]           m_ShadowRequests;
         List<HDShadowResolutionRequest> m_ShadowResolutionRequests = new List<HDShadowResolutionRequest>();
-
+        
         HDDirectionalShadowData     m_DirectionalShadowData;
 
+#if USE_PACKED_SHADOWDATA
+        ComputeBuffer m_PackedShadowBuffer;
+        List<PackedShadowData> m_packedShadowDataList = null;
+#else
         // Structured buffer of shadow datas
-        ComputeBuffer               m_ShadowDataBuffer;
+        ComputeBuffer m_ShadowDataBuffer;
         ComputeBuffer               m_DirectionalShadowDataBuffer;
+#endif
 
         // The two shadowmaps atlases we uses, one for directional cascade (without resize) and the second for the rest of the shadows
         HDShadowAtlas               m_CascadeAtlas;
@@ -214,9 +220,14 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             m_CascadeAtlas = new HDShadowAtlas(renderPipelineResources, 1, 1, HDShaderIDs._CascadeShadowAtlasSize, clearMaterial, useMomentShadows, depthBufferBits: directionalShadowDepthBits, name: "Cascade Shadow Map Atlas");
 
             m_AreaLightShadowAtlas = new HDShadowAtlas(renderPipelineResources, areaLightAtlasInfo.shadowAtlasResolution, areaLightAtlasInfo.shadowAtlasResolution, HDShaderIDs._AreaShadowAtlasSize, clearMaterial, false, BlurredEVSM: true, depthBufferBits: areaLightAtlasInfo.shadowAtlasDepthBits, name: "Area Light Shadow Map Atlas");
-
+#if USE_PACKED_SHADOWDATA
+            m_PackedShadowBuffer = new ComputeBuffer(maxShadowRequests + 1, System.Runtime.InteropServices.Marshal.SizeOf(typeof(PackedShadowData)));
+            m_packedShadowDataList = new List<PackedShadowData>(maxShadowRequests + 1);
+#else
             m_ShadowDataBuffer = new ComputeBuffer(maxShadowRequests, System.Runtime.InteropServices.Marshal.SizeOf(typeof(HDShadowData)));
             m_DirectionalShadowDataBuffer = new ComputeBuffer(1, System.Runtime.InteropServices.Marshal.SizeOf(typeof(HDDirectionalShadowData)));
+
+#endif
 
             m_MaxShadowRequests = maxShadowRequests;
         }
@@ -515,17 +526,34 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             // Avoid to upload datas which will not be used
             if (m_ShadowRequestCount == 0)
                 return;
+#if USE_PACKED_SHADOWDATA
+            m_packedShadowDataList.Clear();
+            m_packedShadowDataList.Add(GPUDataPackedUtils.ToPackedShadowData(m_DirectionalShadowData));
+            foreach(var packed in m_ShadowDatas)
+            {
+                m_packedShadowDataList.Add(GPUDataPackedUtils.ToPackedShadowData(packed));
+            }
 
-            // Upload the shadow buffers to GPU
+            m_PackedShadowBuffer.SetData(m_packedShadowDataList);
+#else
+
+           // Upload the shadow buffers to GPU
             m_ShadowDataBuffer.SetData(m_ShadowDatas);
             m_DirectionalShadowDataBuffer.SetData(new HDDirectionalShadowData[]{ m_DirectionalShadowData });
+#endif
+
         }
 
         public void BindResources(CommandBuffer cmd)
         {
-            // This code must be in sync with HDShadowContext.hlsl
+#if USE_PACKED_SHADOWDATA
+            cmd.SetGlobalBuffer(HDShaderIDs._PackedShadowData, m_PackedShadowBuffer);
+#else
+                        // This code must be in sync with HDShadowContext.hlsl
             cmd.SetGlobalBuffer(HDShaderIDs._HDShadowDatas, m_ShadowDataBuffer);
             cmd.SetGlobalBuffer(HDShaderIDs._HDDirectionalShadowData, m_DirectionalShadowDataBuffer);
+
+#endif
 
             cmd.SetGlobalTexture(HDShaderIDs._ShadowmapAtlas, m_Atlas.identifier);
             cmd.SetGlobalTexture(HDShaderIDs._ShadowmapCascadeAtlas, m_CascadeAtlas.identifier);
@@ -603,8 +631,14 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
         public void Dispose()
         {
+#if USE_PACKED_SHADOWDATA
+
+            m_PackedShadowBuffer.Dispose();
+#else
             m_ShadowDataBuffer.Dispose();
             m_DirectionalShadowDataBuffer.Dispose();
+#endif
+
             m_Atlas.Release();
             m_AreaLightShadowAtlas.Release();
             m_CascadeAtlas.Release();

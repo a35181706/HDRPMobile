@@ -385,7 +385,7 @@ void LightLoop_PunctalLight(LightLoopContext context, float3 V, PositionInputs p
 			// However, we are certain at this point that the index is scalar.
 			s_lightIdx = WaveReadLaneFirst(s_lightIdx);
 #endif
-			LightData s_lightData = FetchLight(s_lightIdx);
+			LightData s_lightData =  FetchLight(s_lightIdx);
 
 			// If current scalar and vector light index match, we process the light. The v_lightListOffset for current thread is increased.
 			// Note that the following should really be ==, however, since helper lanes are not considered by WaveActiveMin, such helper lanes could

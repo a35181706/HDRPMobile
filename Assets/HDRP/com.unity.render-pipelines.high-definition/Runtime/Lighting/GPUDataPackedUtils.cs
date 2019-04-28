@@ -7,7 +7,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
     /// </summary>
     public class GPUDataPackedUtils
     {
-        const float Epsilon = 0.0001f;
+        const float Epsilon = 0.000000001f;
 
         public static PackedLightData ToPackedLightData(LightData data)
         {
@@ -271,6 +271,159 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             outData.size = data.packedData10;
             outData.diffuseDimmer = data.packedData10.z;
             outData.specularDimmer = data.packedData10.w;
+
+            return outData;
+        }
+
+        public static PackedShadowData ToPackedShadowData(HDShadowData data)
+        {
+            PackedShadowData outData = default(PackedShadowData);
+
+            outData.packedData1 = data.rot0;
+            outData.packedData1.w = data.edgeTolerance;
+
+            outData.packedData2 = data.rot1;
+            outData.packedData2.w = (float)data.flags + Epsilon; //防止1，转换为float变成0.999999999998;
+
+            outData.packedData3 = data.rot2;
+            outData.packedData3.w = data.shadowFilterParams0.x;
+
+            outData.packedData4 = data.pos;
+            outData.packedData4.w = data.shadowFilterParams0.y;
+
+            outData.packedData5 = data.proj;
+
+            outData.packedData6 = data.atlasOffset;
+            outData.packedData6.z = data.shadowFilterParams0.z;
+            outData.packedData6.w = data.shadowFilterParams0.w;
+
+            outData.packedData7 = data.zBufferParam;
+
+            outData.packedData8 = data.shadowMapSize;
+
+            outData.packedData9 = data.viewBias;
+
+            outData.packedData10 = data.normalBias;
+            outData.packedData10.w = data._padding;
+
+            outData.packedData11 = data.shadowToWorld.GetColumn(0);
+            outData.packedData12 = data.shadowToWorld.GetColumn(1);
+            outData.packedData13 = data.shadowToWorld.GetColumn(2);
+            outData.packedData14 = data.shadowToWorld.GetColumn(3);
+
+            return outData;
+        }
+
+        unsafe public static PackedShadowData ToPackedShadowData(HDDirectionalShadowData data)
+        {
+            PackedShadowData outData = default(PackedShadowData);
+
+            outData.packedData1 = new Vector4(
+                                            data.sphereCascades[4 * 0 + 0],
+                                            data.sphereCascades[4 * 0 + 1],
+                                            data.sphereCascades[4 * 0 + 2],
+                                            data.sphereCascades[4 * 0 + 3]);
+
+            outData.packedData2 = new Vector4(
+                                data.sphereCascades[4 * 1 + 0],
+                                data.sphereCascades[4 * 1 + 1],
+                                data.sphereCascades[4 * 1 + 2],
+                                data.sphereCascades[4 * 1 + 3]);
+
+            outData.packedData3 = new Vector4(
+                    data.sphereCascades[4 * 2 + 0],
+                    data.sphereCascades[4 * 2 + 1],
+                    data.sphereCascades[4 * 2 + 2],
+                    data.sphereCascades[4 * 2 + 3]);
+
+
+            outData.packedData4 = new Vector4(
+                    data.sphereCascades[4 * 3 + 0],
+                    data.sphereCascades[4 * 3 + 1],
+                    data.sphereCascades[4 * 3 + 2],
+                    data.sphereCascades[4 * 3 + 3]);
+
+            outData.packedData5 = data.cascadeDirection;
+
+            outData.packedData6 = new Vector4(
+                    data.cascadeBorders[4 * 0 + 0],
+                    data.cascadeBorders[4 * 0 + 1],
+                    data.cascadeBorders[4 * 0 + 2],
+                    data.cascadeBorders[4 * 0 + 3]);
+
+            return outData;
+        }
+
+        unsafe public static HDDirectionalShadowData UnPackedShadowDataToDirectionShadowData(PackedShadowData data)
+        {
+            HDDirectionalShadowData outData = default(HDDirectionalShadowData);
+
+            outData.sphereCascades[4 * 0 + 0] = data.packedData1.x;
+            outData.sphereCascades[4 * 0 + 1] = data.packedData1.y;
+            outData.sphereCascades[4 * 0 + 2] = data.packedData1.z;
+            outData.sphereCascades[4 * 0 + 3] = data.packedData1.w;
+
+            outData.sphereCascades[4 * 1 + 0] = data.packedData2.x;
+            outData.sphereCascades[4 * 1 + 1] = data.packedData2.y;
+            outData.sphereCascades[4 * 1 + 2] = data.packedData2.z;
+            outData.sphereCascades[4 * 1 + 3] = data.packedData2.w;
+
+
+            outData.sphereCascades[4 * 2 + 0] = data.packedData3.x;
+            outData.sphereCascades[4 * 2 + 1] = data.packedData3.y;
+            outData.sphereCascades[4 * 2 + 2] = data.packedData3.z;
+            outData.sphereCascades[4 * 2 + 3] = data.packedData3.w;
+
+            outData.sphereCascades[4 * 3 + 0] = data.packedData4.x;
+            outData.sphereCascades[4 * 3 + 1] = data.packedData4.y;
+            outData.sphereCascades[4 * 3 + 2] = data.packedData4.z;
+            outData.sphereCascades[4 * 3 + 3] = data.packedData4.w;
+
+            outData.cascadeDirection = data.packedData5;
+
+            outData.cascadeBorders[4 * 0 + 0] = data.packedData6.x;
+            outData.cascadeBorders[4 * 0 + 1] = data.packedData6.y;
+            outData.cascadeBorders[4 * 0 + 2] = data.packedData6.z;
+            outData.cascadeBorders[4 * 0 + 3] = data.packedData6.w;
+
+            return outData;
+        }
+
+        public static HDShadowData UnPackedShadowDataToShadowData(PackedShadowData data)
+        {
+            HDShadowData outData = default(HDShadowData);
+
+            outData.rot0 = data.packedData1;
+            outData.edgeTolerance = data.packedData1.w;
+
+            outData.rot1 = data.packedData2;
+            outData.flags = (int)data.packedData2.w;
+
+            outData.rot2 = data.packedData3;
+            outData.shadowFilterParams0.x = data.packedData3.w;
+
+            outData.pos = data.packedData4;
+            outData.shadowFilterParams0.y = data.packedData4.w;
+
+            outData.proj = data.packedData5;
+
+            outData.atlasOffset = data.packedData6;
+            outData.shadowFilterParams0.z = data.packedData6.z;
+            outData.shadowFilterParams0.w = data.packedData6.w;
+
+            outData.zBufferParam = data.packedData7;
+
+            outData.shadowMapSize = data.packedData8;
+
+            outData.viewBias = data.packedData9;
+
+            outData.normalBias = data.packedData10.normalized;
+            outData._padding = data.packedData10.w;
+
+            outData.shadowToWorld.SetColumn(0,data.packedData11);
+            outData.shadowToWorld.SetColumn(1, data.packedData12);
+            outData.shadowToWorld.SetColumn(2, data.packedData13);
+            outData.shadowToWorld.SetColumn(3, data.packedData14);
 
             return outData;
         }

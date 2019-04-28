@@ -9,7 +9,7 @@ DirectionalLightData UnPackedLightDataToDirectionalLightData(PackedLightData dat
 	ZERO_INITIALIZE(DirectionalLightData, outData);
 
 	outData.positionRWS = data.packedData1.xyz;
-	outData.lightLayers = int(data.packedData1.w);
+	outData.lightLayers = asint(data.packedData1.w);
 
 	outData.forward = data.packedData2.xyz;
 	outData.lightDimmer = data.packedData2.w;
@@ -25,14 +25,14 @@ DirectionalLightData UnPackedLightDataToDirectionalLightData(PackedLightData dat
 
 	outData.shadowMaskSelector = data.packedData6;
 
-	outData.cookieIndex = int(data.packedData7.x);
-	outData.tileCookie = int(data.packedData7.y);
-	outData.shadowIndex = int(data.packedData7.z);
-	outData.contactShadowIndex = int(data.packedData7.w);
+	outData.cookieIndex = asint(data.packedData7.x);
+	outData.tileCookie = asint(data.packedData7.y);
+	outData.shadowIndex = asint(data.packedData7.z);
+	outData.contactShadowIndex = asint(data.packedData7.w);
 
 	outData.shadowDimmer = data.packedData8.x;
 	outData.volumetricShadowDimmer = data.packedData8.y;
-	outData.nonLightMappedOnly = int(data.packedData8.z);
+	outData.nonLightMappedOnly = asint(data.packedData8.z);
 	outData.minRoughness = data.packedData8.w;
 
 	outData.diffuseDimmer = data.packedData9.x;
@@ -47,10 +47,10 @@ EnvLightData UnPackedLightDataToEnvLightData(PackedLightData data)
 	ZERO_INITIALIZE(EnvLightData, outData);
 
 	outData.capturePositionRWS = data.packedData1.xyz;
-	outData.lightLayers = int(data.packedData1.w);
+	outData.lightLayers = asint(data.packedData1.w);
 
 	outData.proxyForward = data.packedData2.xyz;
-	outData.influenceShapeType = int(data.packedData2.w);
+	outData.influenceShapeType = asint(data.packedData2.w);
 
 	outData.proxyRight = data.packedData3.xyz;
 	outData.minProjectionDistance = data.packedData3.w;
@@ -62,7 +62,7 @@ EnvLightData UnPackedLightDataToEnvLightData(PackedLightData data)
 	outData.multiplier = data.packedData5.w;
 
 	outData.influencePositionRWS = data.packedData6.xyz;
-	outData.envIndex = int(data.packedData6.w);
+	outData.envIndex = asint(data.packedData6.w);
 
 	outData.influenceForward = data.packedData7.xyz;
 	outData.boxSideFadeNegative.x = data.packedData7.w;
@@ -95,7 +95,7 @@ LightData UnPackedLightDataToLightData(PackedLightData data)
 	ZERO_INITIALIZE(LightData, outData);
 
 	outData.positionRWS = data.packedData1.xyz;
-	outData.lightLayers = int(data.packedData1.w);
+	outData.lightLayers = asint(data.packedData1.w);
 
 	outData.forward = data.packedData2.xyz;
 	outData.lightDimmer = data.packedData2.w;
@@ -111,19 +111,19 @@ LightData UnPackedLightDataToLightData(PackedLightData data)
 
 	outData.shadowMaskSelector = data.packedData6;
 
-	outData.lightType = int(data.packedData7.x);
+	outData.lightType = asint(data.packedData7.x);
 	outData.range = data.packedData7.y;
 	outData.rangeAttenuationScale = data.packedData7.z;
 	outData.rangeAttenuationBias = data.packedData7.w;
 
-	outData.cookieIndex = int(data.packedData8.x);
-	outData.tileCookie = int(data.packedData8.y);
-	outData.shadowIndex = int(data.packedData8.z);
-	outData.contactShadowIndex = int(data.packedData8.w);
+	outData.cookieIndex = asint(data.packedData8.x);
+	outData.tileCookie = asint(data.packedData8.y);
+	outData.shadowIndex = asint(data.packedData8.z);
+	outData.contactShadowIndex = asint(data.packedData8.w);
 
 	outData.shadowDimmer = data.packedData9.x;
 	outData.volumetricShadowDimmer = data.packedData9.y;
-	outData.nonLightMappedOnly = int(data.packedData9.z);
+	outData.nonLightMappedOnly = asint(data.packedData9.z);
 	outData.minRoughness = data.packedData9.w;
 
 	outData.size = data.packedData10.xy;

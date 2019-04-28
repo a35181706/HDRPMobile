@@ -2939,7 +2939,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                             // as it is guaranteed to exist and to have the same size.
                             // to avoid warnings about unbound render targets. 
                             : m_SharedRTManager.GetNormalBuffer();
-                                                    
+
 
                         HDUtils.SetRenderTarget(cmd, hdCamera, m_MRTTransparentMotionVec, m_SharedRTManager.GetDepthStencilBuffer(hdCamera.frameSettings.IsEnabled(FrameSettingsField.MSAA)));
                         if ((hdCamera.frameSettings.IsEnabled(FrameSettingsField.Decals)) && (DecalSystem.m_DecalDatasCount > 0)) // enable d-buffer flag value is being interpreted more like enable decals in general now that we have clustered

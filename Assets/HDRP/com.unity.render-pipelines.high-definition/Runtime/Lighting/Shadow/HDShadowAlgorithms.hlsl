@@ -351,10 +351,11 @@ int EvalShadow_GetSplitIndex(HDShadowContext shadowContext, int index, float3 po
 
 void LoadDirectionalShadowDatas(inout HDShadowData sd, HDShadowContext shadowContext, int index)
 {
-    sd.proj = shadowContext.shadowDatas[index].proj;
-    sd.pos = shadowContext.shadowDatas[index].pos;
-    sd.viewBias = shadowContext.shadowDatas[index].viewBias;
-    sd.atlasOffset = shadowContext.shadowDatas[index].atlasOffset;
+	HDShadowData shadowData = FetchHDShadow(index);
+    sd.proj = shadowData.proj;
+    sd.pos = shadowData.pos;
+    sd.viewBias = shadowData.viewBias;
+    sd.atlasOffset = shadowData.atlasOffset;
 }
 
 float EvalShadow_CascadedDepth_Blend(HDShadowContext shadowContext, Texture2D tex, SamplerComparisonState samp, float2 positionSS, float3 positionWS, float3 normalWS, int index, float3 L)
@@ -369,7 +370,7 @@ float EvalShadow_CascadedDepth_Blend(HDShadowContext shadowContext, Texture2D te
 
     if (shadowSplitIndex >= 0.0)
     {
-        HDShadowData sd = shadowContext.shadowDatas[index];
+        HDShadowData sd = FetchHDShadow(index);
         LoadDirectionalShadowDatas(sd, shadowContext, index + shadowSplitIndex);
     
         /* normal based bias */
