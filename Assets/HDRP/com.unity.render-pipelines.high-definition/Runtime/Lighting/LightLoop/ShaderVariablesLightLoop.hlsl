@@ -6,15 +6,24 @@
 #else
     #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightDefinition.cs.hlsl"
 	#define USE_PACKED_LIGHTDATA //¿ªÆôPackedLightData
+	//#define USE_PACKED_CLUSTERDATA
 
 #ifdef USE_PACKED_LIGHTDATA
 	#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/PackedLightData.cs.hlsl"
+	#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/PackedClusterData.cs.hlsl"
 #endif
+
+#ifdef USE_PACKED_CLUSTERDATA
+StructuredBuffer<float> g_PackedClusterBuffer;
+#else
+StructuredBuffer<uint>  g_vLayeredOffsetsBuffer;
+StructuredBuffer<float> g_logBaseBuffer;
+#endif
+
     // don't support Buffer yet in unity
     StructuredBuffer<uint>  g_vBigTileLightList;
     StructuredBuffer<uint>  g_vLightListGlobal;
-    StructuredBuffer<uint>  g_vLayeredOffsetsBuffer;
-    StructuredBuffer<float> g_logBaseBuffer;
+
 
 #ifdef USE_INDIRECT
         StructuredBuffer<uint> g_TileFeatureFlags;

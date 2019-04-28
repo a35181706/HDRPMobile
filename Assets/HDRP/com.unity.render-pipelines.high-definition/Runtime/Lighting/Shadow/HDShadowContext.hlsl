@@ -77,7 +77,7 @@ HDShadowData UnPackedShadowDataToShadowData(PackedShadowData data)
 	return outData;
 }
 
-HDShadowData FetchHDShadow(int index)
+HDShadowData FetchHDShadowData(int index)
 {
 	return UnPackedShadowDataToShadowData(_PackedShadowData[1 + index]);
 }
@@ -99,7 +99,7 @@ StructuredBuffer<HDShadowData>              _HDShadowDatas;
 // Only the first element is used since we only support one directional light
 StructuredBuffer<HDDirectionalShadowData>   _HDDirectionalShadowData;
 
-HDShadowData FetchHDShadow(int index)
+HDShadowData FetchHDShadowData(int index)
 {
 	return _HDShadowDatas[index];
 }

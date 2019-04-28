@@ -1,4 +1,5 @@
 #define USE_PACKED_LIGHTDATA
+//#define USE_PACKED_CLUSTERDATA
 using System;
 using System.Collections.Generic;
 using UnityEngine.Rendering;
@@ -357,8 +358,15 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         const float k_ClustLogBase = 1.02f;     // each slice 2% bigger than the previous
         float m_ClustScale;
         static ComputeBuffer s_PerVoxelLightLists = null;
+
+#if USE_PACKED_CLUSTERDATA
+        static ComputeBuffer s_PackedClusterDatas = null;
+#else
         static ComputeBuffer s_PerVoxelOffset = null;
         static ComputeBuffer s_PerTileLogBaseTweak = null;
+
+#endif
+
         static ComputeBuffer s_GlobalLightListAtomic = null;
 
         static DebugLightVolumes s_lightVolumes = null;
