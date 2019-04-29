@@ -1,3 +1,4 @@
+#define USE_PACKED_CLUSTERDATA
 #pragma kernel TileLightListGen_NoDepthRT                   LIGHTLISTGEN=TileLightListGen_NoDepthRT
 #pragma kernel TileLightListGen_DepthRT                     LIGHTLISTGEN=TileLightListGen_DepthRT           ENABLE_DEPTH_TEXTURE_BACKPLANE
 #pragma kernel TileLightListGen_DepthRT_MSAA                LIGHTLISTGEN=TileLightListGen_DepthRT_MSAA      ENABLE_DEPTH_TEXTURE_BACKPLANE      MSAA_ENABLED
@@ -19,6 +20,10 @@
 #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoop.cs.hlsl"
 #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightingConvexHullUtils.hlsl"
 #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightCullUtils.hlsl"
+
+#ifdef USE_PACKED_CLUSTERDATA
+#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/PackedClusterData.cs.hlsl"
+#endif
 
 #if !defined(SHADER_API_XBOXONE) && !defined(SHADER_API_PSSL) && !defined(SHADER_API_SWITCH)
 #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/SortingComputeUtils.hlsl"
@@ -55,7 +60,6 @@ CBUFFER_END
 // ClusteredUtils.hlsl is dependent on the constants declared in UnityLightListClustered :/
 // g_fClustBase, g_fNearPlane, g_fFarPlane, g_iLog2NumClusters
 #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/ClusteredUtils.hlsl"
-
 StructuredBuffer<float4> g_vBoundsBuffer : register( t1 );
 StructuredBuffer<LightVolumeData> _LightVolumeData : register(t2);
 StructuredBuffer<SFiniteLightBound> g_data : register( t3 );
@@ -71,13 +75,21 @@ StructuredBuffer<uint> g_vBigTileLightList : register( t4 );        // don't sup
 #define NR_THREADS              64                                  // default to 64 threads per group on other platforms..
 #endif
 
-RWStructuredBuffer<uint> g_vLayeredLightList : register( u0 );          // don't support RWBuffer yet in unity
-RWStructuredBuffer<uint> g_LayeredOffset : register( u1 );              // don't support RWBuffer yet in unity
-RWStructuredBuffer<uint> g_LayeredSingleIdxBuffer : register( u2 );     // don't support RWBuffer yet in unity
+#ifdef USE_PACKED_CLUSTERDATA
+RWStructuredBuffer<uint> g_vLayeredLightList : register(u0);          // don't support RWBuffer yet in unity
+RWStructuredBuffer<PackedClusterData> g_PackedClusterBuffer : register(u1);              // don't support RWBuffer yet in unity
+RWStructuredBuffer<uint> g_LayeredSingleIdxBuffer : register(u2);     // don't support RWBuffer yet in unity
+#else
+RWStructuredBuffer<uint> g_vLayeredLightList : register(u0);          // don't support RWBuffer yet in unity
+RWStructuredBuffer<uint> g_LayeredOffset : register(u1);              // don't support RWBuffer yet in unity
+RWStructuredBuffer<uint> g_LayeredSingleIdxBuffer : register(u2);     // don't support RWBuffer yet in unity
 
 #ifdef ENABLE_DEPTH_TEXTURE_BACKPLANE
-RWStructuredBuffer<float> g_logBaseBuffer : register( u3 );             // don't support RWBuffer yet in unity
+RWStructuredBuffer<float> g_logBaseBuffer : register(u3);             // don't support RWBuffer yet in unity
 #endif
+
+#endif
+
 
 
 #define MAX_NR_COARSE_ENTRIES       128
@@ -433,21 +445,52 @@ void LIGHTLISTGEN(uint threadID : SV_GroupIndex, uint3 u3GroupID : SV_GroupID)
     uint localOffs=0;
 
     offs = GenerateLayeredOffsetBufferIndex(0, tileIDX, i, nrTilesX, nrTilesY, nrClusters, eyeIndex);
-    for(int category=0; category<LIGHTCATEGORY_COUNT; category++)
-    {
-        int numLights = min(categoryListCount[category],31);        // only allow 5 bits
-        if(i<nrClusters)
-        {
-            g_LayeredOffset[offs] = (start+localOffs) | (((uint) numLights)<<27);
-            offs += (nrClusters*nrTilesX*nrTilesY);
-            localOffs += categoryListCount[category];       // use unclamped count for localOffs
-        }
-    }
+
+#ifdef USE_PACKED_CLUSTERDATA
+	for (int category = 0; category < LIGHTCATEGORY_COUNT; category++)
+	{
+		int numLights = min(categoryListCount[category], 31);        // only allow 5 bits
+		if (i < nrClusters)
+		{
+			PackedClusterData outData = g_PackedClusterBuffer[offs];
+			outData.layeredOffset = (start + localOffs) | (((uint) numLights) << 27);
+			g_PackedClusterBuffer[offs] = outData;
+
+			offs += (nrClusters*nrTilesX*nrTilesY);
+			localOffs += categoryListCount[category];       // use unclamped count for localOffs
+		}
+	}
 
 #ifdef ENABLE_DEPTH_TEXTURE_BACKPLANE
-    const uint logBaseIndex = GenerateLogBaseBufferIndex(tileIDX, nrTilesX, nrTilesY, eyeIndex);
-    if(threadID==0) g_logBaseBuffer[logBaseIndex] = suggestedBase;
+	const uint logBaseIndex = GenerateLogBaseBufferIndex(tileIDX, nrTilesX, nrTilesY, eyeIndex);
+	if (threadID == 0) 
+	{
+		PackedClusterData outData = g_PackedClusterBuffer[logBaseIndex];
+		outData.logBase = suggestedBase;
+		g_PackedClusterBuffer[logBaseIndex] = outData;
+
+	} 
 #endif
+
+#else
+	for (int category = 0; category < LIGHTCATEGORY_COUNT; category++)
+	{
+		int numLights = min(categoryListCount[category], 31);        // only allow 5 bits
+		if (i < nrClusters)
+		{
+			g_LayeredOffset[offs] = 134217728;// (start + localOffs) | (((uint) numLights) << 27);
+			offs += (nrClusters*nrTilesX*nrTilesY);
+			localOffs += categoryListCount[category];       // use unclamped count for localOffs
+		}
+	}
+
+#ifdef ENABLE_DEPTH_TEXTURE_BACKPLANE
+	const uint logBaseIndex = GenerateLogBaseBufferIndex(tileIDX, nrTilesX, nrTilesY, eyeIndex);
+	if (threadID == 0) g_logBaseBuffer[logBaseIndex] = suggestedBase;
+#endif
+
+#endif
+
 }
 
 

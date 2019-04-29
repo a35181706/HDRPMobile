@@ -8,7 +8,10 @@
 // PackingRules = Exact
 struct PackedClusterData
 {
-    float4 packedData1;
+	float logBase;
+	int layeredOffset;
+	float unused00;
+	float unused01;
 };
 
 

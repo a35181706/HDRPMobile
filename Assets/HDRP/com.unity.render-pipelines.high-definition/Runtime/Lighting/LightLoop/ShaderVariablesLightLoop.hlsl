@@ -6,15 +6,20 @@
 #else
     #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightDefinition.cs.hlsl"
 	#define USE_PACKED_LIGHTDATA //¿ªÆôPackedLightData
-	//#define USE_PACKED_CLUSTERDATA
+	#define USE_PACKED_CLUSTERDATA //¿ªÆôUSE_PACKED_CLUSTERDATA
 
 #ifdef USE_PACKED_LIGHTDATA
 	#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/PackedLightData.cs.hlsl"
-	#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/PackedClusterData.cs.hlsl"
+
 #endif
 
 #ifdef USE_PACKED_CLUSTERDATA
-StructuredBuffer<float> g_PackedClusterBuffer;
+#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/PackedClusterData.cs.hlsl"
+#endif
+
+#ifdef USE_PACKED_CLUSTERDATA
+
+StructuredBuffer<PackedClusterData> g_PackedClusterBuffer;
 #else
 StructuredBuffer<uint>  g_vLayeredOffsetsBuffer;
 StructuredBuffer<float> g_logBaseBuffer;

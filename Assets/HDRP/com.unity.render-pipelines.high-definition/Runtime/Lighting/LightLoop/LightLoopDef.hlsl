@@ -325,7 +325,12 @@ uint GetLightClusterIndex(uint2 tileIndex, float linearDepth)
     if (g_isLogBaseBufferEnabled)
     {
         const uint logBaseIndex = GenerateLogBaseBufferIndex(tileIndex, _NumTileClusteredX, _NumTileClusteredY, unity_StereoEyeIndex);
-        logBase = g_logBaseBuffer[logBaseIndex];
+#ifdef USE_PACKED_CLUSTERDATA
+		logBase = g_PackedClusterBuffer[logBaseIndex].logBase;
+#else
+		logBase = g_logBaseBuffer[logBaseIndex];
+#endif
+
     }
 
     return SnapToClusterIdxFlex(linearDepth, logBase, g_isLogBaseBufferEnabled != 0);
@@ -337,7 +342,13 @@ void GetCountAndStartCluster(uint2 tileIndex, uint clusterIndex, uint lightCateg
 
     const int idx = GenerateLayeredOffsetBufferIndex(lightCategory, tileIndex, clusterIndex, _NumTileClusteredX, _NumTileClusteredY, nrClusters, unity_StereoEyeIndex);
 
-    uint dataPair = g_vLayeredOffsetsBuffer[idx];
+#ifdef USE_PACKED_CLUSTERDATA
+	uint dataPair = g_PackedClusterBuffer[idx].layeredOffset;
+#else
+	uint dataPair = g_vLayeredOffsetsBuffer[idx];
+#endif
+
+  
     start = dataPair & 0x7ffffff;
     lightCount = (dataPair >> 27) & 31;
 }
