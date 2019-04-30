@@ -1,4 +1,4 @@
-#define USE_PACKED_CLUSTERDATA
+//#define USE_PACKED_CLUSTERDATA
 #pragma kernel TileLightListGen_NoDepthRT                   LIGHTLISTGEN=TileLightListGen_NoDepthRT
 #pragma kernel TileLightListGen_DepthRT                     LIGHTLISTGEN=TileLightListGen_DepthRT           ENABLE_DEPTH_TEXTURE_BACKPLANE
 #pragma kernel TileLightListGen_DepthRT_MSAA                LIGHTLISTGEN=TileLightListGen_DepthRT_MSAA      ENABLE_DEPTH_TEXTURE_BACKPLANE      MSAA_ENABLED
@@ -478,7 +478,7 @@ void LIGHTLISTGEN(uint threadID : SV_GroupIndex, uint3 u3GroupID : SV_GroupID)
 		int numLights = min(categoryListCount[category], 31);        // only allow 5 bits
 		if (i < nrClusters)
 		{
-			g_LayeredOffset[offs] = 134217728;// (start + localOffs) | (((uint) numLights) << 27);
+			g_LayeredOffset[offs] = (start + localOffs) | (((uint) numLights) << 27);
 			offs += (nrClusters*nrTilesX*nrTilesY);
 			localOffs += categoryListCount[category];       // use unclamped count for localOffs
 		}

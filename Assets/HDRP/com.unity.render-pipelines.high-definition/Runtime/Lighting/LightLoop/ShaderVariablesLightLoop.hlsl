@@ -6,7 +6,7 @@
 #else
     #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightDefinition.cs.hlsl"
 	#define USE_PACKED_LIGHTDATA //¿ªÆôPackedLightData
-	#define USE_PACKED_CLUSTERDATA //¿ªÆôUSE_PACKED_CLUSTERDATA
+	//#define USE_PACKED_CLUSTERDATA //¿ªÆôUSE_PACKED_CLUSTERDATA
 
 #ifdef USE_PACKED_LIGHTDATA
 	#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/PackedLightData.cs.hlsl"

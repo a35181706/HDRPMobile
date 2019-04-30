@@ -1,5 +1,5 @@
 #define USE_PACKED_LIGHTDATA
-#define USE_PACKED_CLUSTERDATA
+//#define USE_PACKED_CLUSTERDATA
 using System;
 using System.Collections.Generic;
 using UnityEngine.Rendering;
@@ -3030,7 +3030,6 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             // Note: SHADOWS_SHADOWMASK keyword is enabled in HDRenderPipeline.cs ConfigureForShadowMask
 
             bool useFptl = renderOpaque && m_FrameSettings.IsEnabled(FrameSettingsField.FPTLForForwardOpaque);
-
             using (new ProfilingSample(cmd, useFptl ? "Forward Tiled pass" : "Forward Clustered pass", CustomSamplerId.TPForwardTiledClusterpass.GetSampler()))
             {
                 // say that we want to use tile/cluster light loop

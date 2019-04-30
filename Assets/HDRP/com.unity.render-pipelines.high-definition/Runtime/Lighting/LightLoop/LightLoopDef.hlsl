@@ -439,7 +439,7 @@ EnvLightData FetchEnvLight(uint start, uint i)
 {
     int j = FetchIndex(start, i);
 #ifdef USE_PACKED_LIGHTDATA
-	return UnPackedLightDataToEnvLightData(_PackedLightDatas[_DirectionalLightCount + _PunctualLightCount  + j]);
+	return UnPackedLightDataToEnvLightData(_PackedLightDatas[_DirectionalLightCount + _PunctualLightCount + _AreaLightCount + j]);
 #else
 	return _EnvLightDatas[j];
 #endif
@@ -448,7 +448,7 @@ EnvLightData FetchEnvLight(uint start, uint i)
 EnvLightData FetchEnvLight(uint index)
 {
 #ifdef USE_PACKED_LIGHTDATA
-	return UnPackedLightDataToEnvLightData(_PackedLightDatas[_DirectionalLightCount + _PunctualLightCount + index]);
+	return UnPackedLightDataToEnvLightData(_PackedLightDatas[_DirectionalLightCount + _PunctualLightCount + _AreaLightCount + index]);
 #else
 	return _EnvLightDatas[index];
 #endif

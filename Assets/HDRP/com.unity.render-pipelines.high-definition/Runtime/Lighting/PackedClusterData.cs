@@ -9,8 +9,10 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
     [GenerateHLSL(PackingRules.Exact, false)]
     public struct PackedClusterData
     {
-        public float logBase;
         public int layeredOffset;
+
+
+        public float logBase;
         public float unused00;
         public float unused01;
     }
