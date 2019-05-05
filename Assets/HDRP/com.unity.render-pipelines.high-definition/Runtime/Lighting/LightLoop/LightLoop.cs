@@ -1,5 +1,5 @@
 #define USE_PACKED_LIGHTDATA
-//#define USE_PACKED_CLUSTERDATA
+#define USE_PACKED_CLUSTERDATA
 using System;
 using System.Collections.Generic;
 using UnityEngine.Rendering;
@@ -2705,6 +2705,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 cmd.SetGlobalBuffer(HDShaderIDs._EnvLightDatas, m_EnvLightDatas);
 #else
                 cmd.SetGlobalBuffer(HDShaderIDs._PackedLightDatas, m_packedLightDatas);
+
 #endif
                 cmd.SetGlobalInt(HDShaderIDs._DirectionalLightCount, m_lightList.directionalLights.Count);
                 cmd.SetGlobalInt(HDShaderIDs._PunctualLightCount, m_punctualLightCount);

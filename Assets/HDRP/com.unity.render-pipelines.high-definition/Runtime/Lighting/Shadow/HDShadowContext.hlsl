@@ -4,8 +4,6 @@
 #include "Assets/HDRP/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
 #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/Shadow/HDShadowManager.cs.hlsl"
 
-#define USE_PACKED_SHADOWDATA // π”√pakcedshadow
-
 #ifdef USE_PACKED_SHADOWDATA
 #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/Shadow/PackedShadowData.cs.hlsl"
 
@@ -46,7 +44,7 @@ HDShadowData UnPackedShadowDataToShadowData(PackedShadowData data)
 	outData.edgeTolerance = data.packedData1.w;
 
 	outData.rot1 = data.packedData2.xyz;
-	outData.flags = asint(data.packedData2.w);
+	outData.flags = int(data.packedData2.w);
 
 	outData.rot2 = data.packedData3.xyz;
 	outData.shadowFilterParams0.x = data.packedData3.w;

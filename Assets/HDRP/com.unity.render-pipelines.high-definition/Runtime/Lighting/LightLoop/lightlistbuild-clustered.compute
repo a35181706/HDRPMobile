@@ -1,4 +1,3 @@
-//#define USE_PACKED_CLUSTERDATA
 #pragma kernel TileLightListGen_NoDepthRT                   LIGHTLISTGEN=TileLightListGen_NoDepthRT
 #pragma kernel TileLightListGen_DepthRT                     LIGHTLISTGEN=TileLightListGen_DepthRT           ENABLE_DEPTH_TEXTURE_BACKPLANE
 #pragma kernel TileLightListGen_DepthRT_MSAA                LIGHTLISTGEN=TileLightListGen_DepthRT_MSAA      ENABLE_DEPTH_TEXTURE_BACKPLANE      MSAA_ENABLED

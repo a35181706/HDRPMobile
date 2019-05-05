@@ -24,15 +24,6 @@
 #define UNITY_UNROLLX(_x)   [unroll(_x)]
 #define UNITY_LOOP          [loop]
 
-#if SHADER_API_MOBILE
-
-#define FLIP_N_DOT_V 1
-
-#endif
-
-#define asint int
-#define asuint uint
-
 // Initialize arbitrary structure with zero values.
 // Do not exist on some platform, in this case we need to have a standard name that call a function that will initialize all parameters to 0
 #define ZERO_INITIALIZE(type, name) name = (type)0;
@@ -163,4 +154,18 @@
 #define GATHER_GREEN_TEXTURE2D(textureName, samplerName, coord2)          textureName.GatherGreen(samplerName, coord2)
 #define GATHER_BLUE_TEXTURE2D(textureName, samplerName, coord2)           textureName.GatherBlue(samplerName, coord2)
 #define GATHER_ALPHA_TEXTURE2D(textureName, samplerName, coord2)          textureName.GatherAlpha(samplerName, coord2)
+
+
+#if SHADER_API_MOBILE
+
+#define FLIP_N_DOT_V 1
+
+#endif
+
+//#define asint int //这个asint的函数很奇怪，不能真正的转换成int，但是很多地方又用到了，效果有是正常的，把他重定义反而不正常了，所以在需要转换的地方还是直接写吧。
+//#define asuint uint //这个asuint的函数很奇怪，不能真正的转换成int，但是很多地方又用到了，效果有是正常的，把他重定义反而不正常了，所以在需要转换的地方还是直接写吧。
+
+#define USE_PACKED_SHADOWDATA //使用pakcedshadow
+#define USE_PACKED_LIGHTDATA //开启PackedLightData
+#define USE_PACKED_CLUSTERDATA //开启USE_PACKED_CLUSTERDATA
 
