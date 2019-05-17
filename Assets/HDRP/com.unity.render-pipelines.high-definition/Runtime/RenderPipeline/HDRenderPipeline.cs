@@ -127,25 +127,25 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         // The pass "SRPDefaultUnlit" is a fall back to legacy unlit rendering and is required to support unity 2d + unity UI that render in the scene.
         ShaderTagId[] m_ForwardAndForwardOnlyPassNames = { HDShaderPassNames.s_ForwardOnlyName,
                                                            HDShaderPassNames.s_ForwardName,
-                                                           HDShaderPassNames.s_ForwardAddName,
+                                                           //HDShaderPassNames.s_ForwardAddName,
                                                            HDShaderPassNames.s_SRPDefaultUnlitName };
         ShaderTagId[] m_ForwardOnlyPassNames = { HDShaderPassNames.s_ForwardOnlyName, HDShaderPassNames.s_SRPDefaultUnlitName };
 
         ShaderTagId[] m_AllTransparentPassNames = {  HDShaderPassNames.s_TransparentBackfaceName,
                                                         HDShaderPassNames.s_ForwardOnlyName,
                                                         HDShaderPassNames.s_ForwardName,
-                                                        HDShaderPassNames.s_ForwardAddName,
+                                                        //HDShaderPassNames.s_ForwardAddName,
                                                         HDShaderPassNames.s_SRPDefaultUnlitName };
 
         ShaderTagId[] m_TransparentNoBackfaceNames = {  HDShaderPassNames.s_ForwardOnlyName,
                                                         HDShaderPassNames.s_ForwardName,
-                                                        HDShaderPassNames.s_ForwardAddName,
+                                                        //HDShaderPassNames.s_ForwardAddName,
                                                         HDShaderPassNames.s_SRPDefaultUnlitName };
 
 
         ShaderTagId[] m_AllForwardOpaquePassNames = {    HDShaderPassNames.s_ForwardOnlyName,
                                                             HDShaderPassNames.s_ForwardName,
-                                                            HDShaderPassNames.s_ForwardAddName,
+                                                            //HDShaderPassNames.s_ForwardAddName,
                                                             HDShaderPassNames.s_SRPDefaultUnlitName };
 
         ShaderTagId[] m_DepthOnlyAndDepthForwardOnlyPassNames = { HDShaderPassNames.s_DepthForwardOnlyName, HDShaderPassNames.s_DepthOnlyName };
@@ -1831,7 +1831,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                     var visualEnv = VolumeManager.instance.stack.GetComponent<VisualEnvironment>();
                     visualEnv.PushFogShaderParameters(hdCamera, cmd);
                 }
-
+                
                 if (hdCamera.frameSettings.VolumeVoxelizationRunsAsync())
                 {
                     volumeVoxelizationTask.End(cmd);
@@ -1909,7 +1909,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 var currentColorPyramid = hdCamera.GetCurrentFrameRT((int)HDCameraFrameHistoryType.ColorBufferMipChain);
                 cmd.SetGlobalTexture(HDShaderIDs._ColorPyramidTexture, currentColorPyramid);
 
-                // Render all type of transparent forward (unlit, lit, complex (hair...)) to keep the sorting between transparent objects.
+                //Render all type of transparent forward(unlit, lit, complex (hair...)) to keep the sorting between transparent objects.
                 RenderForward(cullingResults, hdCamera, renderContext, cmd, ForwardPass.Transparent);
 
                 // Second resolve the color buffer for finishing the frame
@@ -2882,7 +2882,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
                 if (pass == ForwardPass.OpaqueEmissive) // right now decals only
                 {
-                    RenderDecalsForwardEmissive(hdCamera, cmd, renderContext, cullResults);
+                     RenderDecalsForwardEmissive(hdCamera, cmd, renderContext, cullResults);
                 }
                 else
                 {
@@ -2954,20 +2954,20 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         }
                         else if (hdCamera.frameSettings.IsEnabled(FrameSettingsField.LowResTransparent))
                         {
-                            transparentRange = HDRenderQueue.k_RenderQueue_Transparent;
+                            transparentRange = HDRenderQueue.k_RenderQueue_TransparentWithLowRes;
                         }
                         else // Low res transparent disabled
                         {
-                            transparentRange = HDRenderQueue.k_RenderQueue_TransparentWithLowRes;
+                            transparentRange = HDRenderQueue.k_RenderQueue_Transparent;
                         }
 
 
                         if (!hdCamera.frameSettings.IsEnabled(FrameSettingsField.RoughRefraction))
-                    	{
-                            if(hdCamera.frameSettings.IsEnabled(FrameSettingsField.LowResTransparent))
-                        	    transparentRange = HDRenderQueue.k_RenderQueue_AllTransparent;
-                            else
+                        {
+                            if (hdCamera.frameSettings.IsEnabled(FrameSettingsField.LowResTransparent))
                                 transparentRange = HDRenderQueue.k_RenderQueue_AllTransparentWithLowRes;
+                            else
+                                transparentRange = HDRenderQueue.k_RenderQueue_AllTransparent;
                         }
 
                         if (renderMotionVecForTransparent)

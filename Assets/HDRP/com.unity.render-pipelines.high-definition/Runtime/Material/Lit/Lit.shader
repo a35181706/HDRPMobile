@@ -705,8 +705,7 @@ Shader "HDRP/Lit"
             #pragma multi_compile _ DYNAMICLIGHTMAP_ON
             #pragma multi_compile _ SHADOWS_SHADOWMASK
             // Setup DECALS_OFF so the shader stripper can remove variants
-            //#pragma multi_compile DECALS_OFF DECALS_3RT DECALS_4RT
-				#define DECALS_OFF //nosupport decal
+            #pragma multi_compile DECALS_OFF DECALS_3RT DECALS_4RT
             // Supported shadow modes per light type
             #pragma multi_compile SHADOW_LOW SHADOW_MEDIUM SHADOW_HIGH SHADOW_VERY_HIGH
 
@@ -748,80 +747,80 @@ Shader "HDRP/Lit"
             ENDHLSL
         }
 
-		Pass //ForwardAdd
-		{
-			Name "ForwardAdd"
-			Tags { "LightMode" = "ForwardAdd" } // This will be only for transparent object based on the RenderQueue index
+		//Pass //ForwardAdd
+		//{
+		//	Name "ForwardAdd"
+		//	Tags { "LightMode" = "ForwardAdd" } // This will be only for transparent object based on the RenderQueue index
 
-			Stencil
-			{
-				WriteMask[_StencilWriteMask]
-				Ref[_StencilRef]
-				Comp Always
-				Pass Replace
-			}
+		//	Stencil
+		//	{
+		//		WriteMask[_StencilWriteMask]
+		//		Ref[_StencilRef]
+		//		Comp Always
+		//		Pass Replace
+		//	}
 
-			Blend[_SrcBlend] One
-			//Blend One Zero
-			//Blend[_SrcBlend] One,[_AlphaSrcBlend] [_AlphaDstBlend]
-			// In case of forward we want to have depth equal for opaque mesh
-			ZTest LEqual
-			ZWrite Off
-			Cull[_CullModeForward]
-			ColorMask[_ColorMaskTransparentVel] 1
+		//	Blend[_SrcBlend] One
+		//	//Blend One Zero
+		//	//Blend[_SrcBlend] One,[_AlphaSrcBlend] [_AlphaDstBlend]
+		//	// In case of forward we want to have depth equal for opaque mesh
+		//	ZTest LEqual
+		//	ZWrite Off
+		//	Cull[_CullModeForward]
+		//	ColorMask[_ColorMaskTransparentVel] 1
 
-			HLSLPROGRAM
+		//	HLSLPROGRAM
 
-			#pragma multi_compile _ DEBUG_DISPLAY
-			#pragma multi_compile _ LIGHTMAP_ON
-			#pragma multi_compile _ DIRLIGHTMAP_COMBINED
-			#pragma multi_compile _ DYNAMICLIGHTMAP_ON
-			#pragma multi_compile _ SHADOWS_SHADOWMASK
-			// Setup DECALS_OFF so the shader stripper can remove variants
-			//#pragma multi_compile DECALS_OFF DECALS_3RT DECALS_4RT
-			#define DECALS_OFF //nosupport decal
-			#define FORWARD_ADD
-			#define USE_CLUSTERED_LIGHTLIST
-			// Supported shadow modes per light type
-			#pragma multi_compile SHADOW_LOW SHADOW_MEDIUM SHADOW_HIGH SHADOW_VERY_HIGH
+		//	#pragma multi_compile _ DEBUG_DISPLAY
+		//	#pragma multi_compile _ LIGHTMAP_ON
+		//	#pragma multi_compile _ DIRLIGHTMAP_COMBINED
+		//	#pragma multi_compile _ DYNAMICLIGHTMAP_ON
+		//	#pragma multi_compile _ SHADOWS_SHADOWMASK
+		//	// Setup DECALS_OFF so the shader stripper can remove variants
+		//	//#pragma multi_compile DECALS_OFF DECALS_3RT DECALS_4RT
+		//	#define DECALS_OFF //nosupport decal
+		//	#define FORWARD_ADD
+		//	#define USE_CLUSTERED_LIGHTLIST
+		//	// Supported shadow modes per light type
+		//	#pragma multi_compile SHADOW_LOW SHADOW_MEDIUM SHADOW_HIGH SHADOW_VERY_HIGH
 
-			#pragma multi_compile USE_FPTL_LIGHTLIST USE_CLUSTERED_LIGHTLIST
+		//	#pragma multi_compile USE_FPTL_LIGHTLIST USE_CLUSTERED_LIGHTLIST
 
-			#define SHADERPASS SHADERPASS_FORWARD
-			// In case of opaque we don't want to perform the alpha test, it is done in depth prepass and we use depth equal for ztest (setup from UI)
-			// Don't do it with debug display mode as it is possible there is no depth prepass in this case
-			#if !defined(_SURFACE_TYPE_TRANSPARENT) && !defined(DEBUG_DISPLAY)
-				#define SHADERPASS_FORWARD_BYPASS_ALPHA_TEST
-			#endif
-			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Material.hlsl"
-			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/Lighting.hlsl"
+		//	#define SHADERPASS SHADERPASS_FORWARD
+		//	// In case of opaque we don't want to perform the alpha test, it is done in depth prepass and we use depth equal for ztest (setup from UI)
+		//	// Don't do it with debug display mode as it is possible there is no depth prepass in this case
+		//	#if !defined(_SURFACE_TYPE_TRANSPARENT) && !defined(DEBUG_DISPLAY)
+		//		#define SHADERPASS_FORWARD_BYPASS_ALPHA_TEST
+		//	#endif
+		//	#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Material.hlsl"
+		//	#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/Lighting.hlsl"
 
-		#ifdef DEBUG_DISPLAY
-			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Debug/DebugDisplay.hlsl"
-		#endif
+		//#ifdef DEBUG_DISPLAY
+		//	#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Debug/DebugDisplay.hlsl"
+		//#endif
 
-			// The light loop (or lighting architecture) is in charge to:
-			// - Define light list
-			// - Define the light loop
-			// - Setup the constant/data
-			// - Do the reflection hierarchy
-			// - Provide sampling function for shadowmap, ies, cookie and reflection (depends on the specific use with the light loops like index array or atlas or single and texture format (cubemap/latlong))
+		//	// The light loop (or lighting architecture) is in charge to:
+		//	// - Define light list
+		//	// - Define the light loop
+		//	// - Setup the constant/data
+		//	// - Do the reflection hierarchy
+		//	// - Provide sampling function for shadowmap, ies, cookie and reflection (depends on the specific use with the light loops like index array or atlas or single and texture format (cubemap/latlong))
 
-			#define HAS_LIGHTLOOP
+		//	#define HAS_LIGHTLOOP
 
-			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoopDef.hlsl"
-			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/Lit.hlsl"
-			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoop_Custom.hlsl"
+		//	#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoopDef.hlsl"
+		//	#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/Lit.hlsl"
+		//	#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoop_Custom.hlsl"
 
-			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/ShaderPass/LitSharePass.hlsl"
-			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/LitData.hlsl"
-			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/ShaderPassForward_Custom.hlsl"
+		//	#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/ShaderPass/LitSharePass.hlsl"
+		//	#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/LitData.hlsl"
+		//	#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/ShaderPassForward_Custom.hlsl"
 
-			#pragma vertex Vert
-			#pragma fragment FragAdd
+		//	#pragma vertex Vert
+		//	#pragma fragment FragAdd
 
-			ENDHLSL
-		}
+		//	ENDHLSL
+		//}
 
         Pass
         {

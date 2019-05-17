@@ -484,24 +484,24 @@ void LightLoop(float3 V, PositionInputs posInput, PreLightData preLightData, BSD
 	AggregateLighting aggregateLighting;
 	ZERO_INITIALIZE(AggregateLighting, aggregateLighting); // LightLoop is in charge of initializing the struct
 
-#ifndef FORWARD_ADD
-	LightLoop_DirectLightShadow(context,V, posInput, bsdfData, featureFlags); 
-	LightLoop_DirectLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
-#else
+//#ifndef FORWARD_ADD
+//	LightLoop_DirectLightShadow(context,V, posInput, bsdfData, featureFlags); 
+//	LightLoop_DirectLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
+//#else
+//
+//	LightLoop_PunctalLight(context,V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
+//	LightLoop_EnvAndSkyAndSSR(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
+//	LightLoop_AreaLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
+//	
+//#endif
 
-	LightLoop_PunctalLight(context,V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
+
+	LightLoop_DirectLightShadow(context, V, posInput, bsdfData, featureFlags);
+
+	LightLoop_PunctalLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
+	LightLoop_DirectLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
 	LightLoop_EnvAndSkyAndSSR(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
 	LightLoop_AreaLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
-	
-#endif
-
-
-	//LightLoop_DirectLightShadow(context, V, posInput, bsdfData, featureFlags);
-
-	//LightLoop_PunctalLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
-	//LightLoop_DirectLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
-	//LightLoop_EnvAndSkyAndSSR(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
-	//LightLoop_AreaLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
 	
 
 

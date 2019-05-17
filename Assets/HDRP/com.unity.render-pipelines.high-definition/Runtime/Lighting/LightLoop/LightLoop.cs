@@ -1,5 +1,5 @@
 #define USE_PACKED_LIGHTDATA
-#define USE_PACKED_CLUSTERDATA
+#define USE_PACKED_LIGHTLIST
 using System;
 using System.Collections.Generic;
 using UnityEngine.Rendering;
@@ -196,8 +196,17 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         ComputeBuffer m_LightDatas = null;
         ComputeBuffer m_EnvLightDatas = null;
 #else
+        struct LightBufferDims
+        {
+            public int lightListCount;
+            public int PerVoxelOffsetCount;
+            public int PerVoxellightListCount;
+            public int logBaseCount;
+        }
+
+        LightBufferDims m_lightBufferDims = new LightBufferDims();
         ComputeBuffer m_packedLightDatas = null;
-        List<PackedLightData> m_pakcedLightList = null;
+        List<PackedLightData> m_pakcedLightData = null;
 #endif
 
 
@@ -340,6 +349,10 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         static ComputeBuffer s_LightVolumeDataBuffer = null;
         static ComputeBuffer s_ConvexBoundsBuffer = null;
         static ComputeBuffer s_AABBBoundsBuffer = null;
+
+        /// <summary>
+        /// FPTL LightList
+        /// </summary>
         static ComputeBuffer s_LightList = null;
         static ComputeBuffer s_TileList = null;
         static ComputeBuffer s_TileFeatureFlags = null;
@@ -357,10 +370,15 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 #endif
         const float k_ClustLogBase = 1.02f;     // each slice 2% bigger than the previous
         float m_ClustScale;
+
+        /// <summary>
+        /// Cluster LightList
+        /// </summary>
         static ComputeBuffer s_PerVoxelLightLists = null;
 
-#if USE_PACKED_CLUSTERDATA
-        static ComputeBuffer s_PackedClusterBuffer = null;
+#if USE_PACKED_LIGHTLIST
+        static ComputeBuffer s_PackedLightListBuffer = null;
+        static int s_FillFPTLLightListKernal;
 #else
         static ComputeBuffer s_PerVoxelOffset = null;
         static ComputeBuffer s_PerTileLogBaseTweak = null;
@@ -613,6 +631,10 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 s_shadeOpaqueIndirectShadowMaskFptlKernels[variant] = deferredComputeShader.FindKernel("Deferred_Indirect_ShadowMask_Fptl_Variant" + variant);
             }
 
+#if USE_PACKED_LIGHTLIST
+            s_FillFPTLLightListKernal = buildPerVoxelLightListShader.FindKernel("FillFPTLLightList");
+#endif
+
 #if !USE_PACKED_LIGHTDATA
             // All the allocation of the compute buffers need to happend after the kernel finding in order to avoid the leek loop when a shader does not compile or is not available
             m_DirectionalLightDatas = new ComputeBuffer(m_MaxDirectionalLightsOnScreen, System.Runtime.InteropServices.Marshal.SizeOf(typeof(DirectionalLightData)));
@@ -622,7 +644,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 #else
             m_packedLightDatas = new ComputeBuffer(m_MaxLightsOnScreen,
                                                   System.Runtime.InteropServices.Marshal.SizeOf(typeof(PackedLightData)));
-            m_pakcedLightList = new List<PackedLightData>(m_MaxLightsOnScreen);
+            m_pakcedLightData = new List<PackedLightData>(m_MaxLightsOnScreen);
 #endif
             m_DecalDatas = new ComputeBuffer(m_MaxDecalsOnScreen, System.Runtime.InteropServices.Marshal.SizeOf(typeof(DecalData)));
             s_GlobalLightListAtomic = new ComputeBuffer(1, sizeof(uint));
@@ -713,7 +735,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             CoreUtils.SafeRelease(m_EnvLightDatas);
 #else
             CoreUtils.SafeRelease(m_packedLightDatas);
-            m_pakcedLightList.Clear();
+            m_pakcedLightData.Clear();
 #endif
 
             CoreUtils.SafeRelease(m_DecalDatas);
@@ -827,11 +849,20 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
         public bool NeedResize(int viewCount)
         {
+#if USE_PACKED_LIGHTLIST
+            return s_PackedLightListBuffer == null || s_LightList == null || s_TileList == null || s_TileFeatureFlags == null ||
+    s_AABBBoundsBuffer == null || s_ConvexBoundsBuffer == null || s_LightVolumeDataBuffer == null ||
+    (s_BigTileLightList == null && m_FrameSettings.IsEnabled(FrameSettingsField.BigTilePrepass)) ||
+    (s_DispatchIndirectBuffer == null && m_FrameSettings.IsEnabled(FrameSettingsField.DeferredTile)) ||
+    (s_PerVoxelLightLists == null) || (viewCount > m_MaxViewCount);
+#else
             return s_LightList == null || s_TileList == null || s_TileFeatureFlags == null ||
                 s_AABBBoundsBuffer == null || s_ConvexBoundsBuffer == null || s_LightVolumeDataBuffer == null ||
                 (s_BigTileLightList == null && m_FrameSettings.IsEnabled(FrameSettingsField.BigTilePrepass)) ||
                 (s_DispatchIndirectBuffer == null && m_FrameSettings.IsEnabled(FrameSettingsField.DeferredTile)) ||
                 (s_PerVoxelLightLists == null) || (viewCount > m_MaxViewCount);
+#endif
+
         }
 
         public void ReleaseResolutionDependentBuffers()
@@ -844,8 +875,8 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
             // enableClustered
             CoreUtils.SafeRelease(s_PerVoxelLightLists);
-#if USE_PACKED_CLUSTERDATA
-            CoreUtils.SafeRelease(s_PackedClusterBuffer);
+#if USE_PACKED_LIGHTLIST
+            CoreUtils.SafeRelease(s_PackedLightListBuffer);
 #else
             CoreUtils.SafeRelease(s_PerVoxelOffset);
             CoreUtils.SafeRelease(s_PerTileLogBaseTweak);
@@ -871,25 +902,42 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             var nrTilesX = (width + LightDefinitions.s_TileSizeFptl - 1) / LightDefinitions.s_TileSizeFptl;
             var nrTilesY = (height + LightDefinitions.s_TileSizeFptl - 1) / LightDefinitions.s_TileSizeFptl;
             var nrTiles = nrTilesX * nrTilesY * m_MaxViewCount;
+
+
             const int capacityUShortsPerTile = 32;
             const int dwordsPerTile = (capacityUShortsPerTile + 1) >> 1;        // room for 31 lights and a nrLights value.
 
-            int lightListCout = (int)LightCategory.Count * dwordsPerTile * nrTiles;
-            
-            s_LightList = new ComputeBuffer(lightListCout, sizeof(uint));       // enough list memory for a 4k x 4k display
+       
+            int lightListCount = (int)LightCategory.Count * dwordsPerTile * nrTiles;
+
             s_TileList = new ComputeBuffer((int)LightDefinitions.s_NumFeatureVariants * nrTiles, sizeof(uint));
             s_TileFeatureFlags = new ComputeBuffer(nrTiles, sizeof(uint));
+
+            //FPTL LightList
+            s_LightList = new ComputeBuffer(lightListCount, sizeof(uint));       // enough list memory for a 4k x 4k display
 
             // Cluster
             var nrClustersX = (width + LightDefinitions.s_TileSizeClustered - 1) / LightDefinitions.s_TileSizeClustered;
             var nrClustersY = (height + LightDefinitions.s_TileSizeClustered - 1) / LightDefinitions.s_TileSizeClustered;
             var nrClusterTiles = nrClustersX * nrClustersY * m_MaxViewCount;
             int PerVoxellightListCout = NumLightIndicesPerClusteredTile() * nrClusterTiles;
+            int PerVoxelOffsetCount = Mathf.Max((int)LightCategory.Count * (1 << k_Log2NumClusters) * nrClusterTiles, nrClusterTiles);
+
+            //Cluster LightList
             s_PerVoxelLightLists = new ComputeBuffer(PerVoxellightListCout, sizeof(uint));
-#if USE_PACKED_CLUSTERDATA
-            int clustersize = Mathf.Max((int)LightCategory.Count * (1 << k_Log2NumClusters) * nrClusterTiles, nrClusterTiles);
-            s_PackedClusterBuffer = new ComputeBuffer(clustersize, System.Runtime.InteropServices.Marshal.SizeOf(typeof(PackedClusterData)));
+
+
+#if USE_PACKED_LIGHTLIST
+
+            m_lightBufferDims.lightListCount = lightListCount;
+            m_lightBufferDims.PerVoxelOffsetCount = PerVoxelOffsetCount;
+            m_lightBufferDims.PerVoxellightListCount = PerVoxellightListCout;
+            m_lightBufferDims.logBaseCount = nrClusterTiles;
+            int packedLightListSize = Mathf.Max(lightListCount, PerVoxelOffsetCount, PerVoxellightListCout, nrClusterTiles);
+            
+            s_PackedLightListBuffer = new ComputeBuffer(packedLightListSize, System.Runtime.InteropServices.Marshal.SizeOf(typeof(PackedLightList)));
 #else
+           
             s_PerVoxelOffset = new ComputeBuffer((int)LightCategory.Count * (1 << k_Log2NumClusters) * nrClusterTiles, sizeof(uint));
             if (k_UseDepthBuffer)
             {
@@ -2340,15 +2388,17 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             var genListPerVoxelKernel = isProjectionOblique ? s_GenListPerVoxelKernelOblique : s_GenListPerVoxelKernel;
 
             cmd.SetComputeTextureParam(buildPerVoxelLightListShader, genListPerVoxelKernel, HDShaderIDs.g_depth_tex, cameraDepthBufferRT);
-            cmd.SetComputeBufferParam(buildPerVoxelLightListShader, genListPerVoxelKernel, HDShaderIDs.g_vLayeredLightList, s_PerVoxelLightLists);
-#if USE_PACKED_CLUSTERDATA
-            cmd.SetComputeBufferParam(buildPerVoxelLightListShader, genListPerVoxelKernel, HDShaderIDs.g_PackedClusterBuffer, s_PackedClusterBuffer);
+
+#if USE_PACKED_LIGHTLIST
+
+            cmd.SetComputeBufferParam(buildPerVoxelLightListShader, genListPerVoxelKernel, HDShaderIDs.g_PackedLightListBuffer, s_PackedLightListBuffer);
             cmd.SetComputeBufferParam(buildPerVoxelLightListShader, genListPerVoxelKernel, HDShaderIDs.g_LayeredSingleIdxBuffer, s_GlobalLightListAtomic);
             if (m_FrameSettings.IsEnabled(FrameSettingsField.BigTilePrepass))
                 cmd.SetComputeBufferParam(buildPerVoxelLightListShader, genListPerVoxelKernel, HDShaderIDs.g_vBigTileLightList, s_BigTileLightList);
 
 
 #else
+            cmd.SetComputeBufferParam(buildPerVoxelLightListShader, genListPerVoxelKernel, HDShaderIDs.g_vLayeredLightList, s_PerVoxelLightLists);
             cmd.SetComputeBufferParam(buildPerVoxelLightListShader, genListPerVoxelKernel, HDShaderIDs.g_LayeredOffset, s_PerVoxelOffset);
             cmd.SetComputeBufferParam(buildPerVoxelLightListShader, genListPerVoxelKernel, HDShaderIDs.g_LayeredSingleIdxBuffer, s_GlobalLightListAtomic);
             if (m_FrameSettings.IsEnabled(FrameSettingsField.BigTilePrepass))
@@ -2365,10 +2415,30 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             cmd.SetComputeBufferParam(buildPerVoxelLightListShader, genListPerVoxelKernel, HDShaderIDs._LightVolumeData, s_LightVolumeDataBuffer);
             cmd.SetComputeBufferParam(buildPerVoxelLightListShader, genListPerVoxelKernel, HDShaderIDs.g_data, s_ConvexBoundsBuffer);
 
+
             var numTilesX = GetNumTileClusteredX(hdCamera);
             var numTilesY = GetNumTileClusteredY(hdCamera);
 
             cmd.DispatchCompute(buildPerVoxelLightListShader, genListPerVoxelKernel, numTilesX, numTilesY, hdCamera.computePassCount);
+
+#if USE_PACKED_LIGHTLIST
+            if (m_FrameSettings.fptl)
+            {
+                cmd.BeginSample("Copy FPTL LightList");
+                int[] LightListDim = new int[4];
+                LightListDim[0] = 32;
+                LightListDim[1] = 1;
+                LightListDim[2] = 1;
+                LightListDim[3] = s_PackedLightListBuffer.count;
+
+                cmd.SetComputeBufferParam(buildPerVoxelLightListShader, s_FillFPTLLightListKernal, HDShaderIDs.g_PackedLightListBuffer, s_PackedLightListBuffer);
+                cmd.SetComputeBufferParam(buildPerVoxelLightListShader, s_FillFPTLLightListKernal, HDShaderIDs.g_vLightList, s_LightList);
+                cmd.SetComputeIntParams(buildPerVoxelLightListShader, HDShaderIDs.g_vLightListDim, LightListDim);
+                cmd.DispatchCompute(buildPerVoxelLightListShader, s_FillFPTLLightListKernal, LightListDim[0], LightListDim[1], LightListDim[2] );
+                cmd.EndSample("Copy FPTL LightList");
+            }
+#endif
+
         }
 
         public void BuildGPULightListsCommon(HDCamera hdCamera, CommandBuffer cmd, RenderTargetIdentifier cameraDepthBufferRT, RenderTargetIdentifier stencilTextureRT, bool skyEnabled)
@@ -2638,26 +2708,26 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             m_LightDatas.SetData(m_lightList.lights);
             m_EnvLightDatas.SetData(m_lightList.envLights);
 #else
-            m_pakcedLightList.Clear();//为了避免数组越界，这里需要填充所有的light
+            m_pakcedLightData.Clear();//为了避免数组越界，这里需要填充所有的light
             //先dir，他们使用到的机会是依次递减
             foreach(var light in m_lightList.directionalLights)
             {
-                m_pakcedLightList.Add(GPUDataPackedUtils.ToPackedLightData(light));
+                m_pakcedLightData.Add(GPUDataPackedUtils.ToPackedLightData(light));
             }
 
             //再light
             foreach (var light in m_lightList.lights)
             {
-                m_pakcedLightList.Add(GPUDataPackedUtils.ToPackedLightData(light));
+                m_pakcedLightData.Add(GPUDataPackedUtils.ToPackedLightData(light));
             }
 
             //再env，
             foreach (var light in m_lightList.envLights)
             {
-                m_pakcedLightList.Add(GPUDataPackedUtils.ToPackedLightData(light));
+                m_pakcedLightData.Add(GPUDataPackedUtils.ToPackedLightData(light));
             }
 
-            m_packedLightDatas.SetData(m_pakcedLightList);
+            m_packedLightDatas.SetData(m_pakcedLightData);
 #endif
             m_DecalDatas.SetData(DecalSystem.m_DecalDatas, 0, 0, Math.Min(DecalSystem.m_DecalDatasCount, m_MaxDecalsOnScreen)); // don't add more than the size of the buffer
 
@@ -2738,8 +2808,8 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
                     cmd.SetGlobalInt(HDShaderIDs.g_isLogBaseBufferEnabled, k_UseDepthBuffer ? 1 : 0);
 
-#if USE_PACKED_CLUSTERDATA
-                    cmd.SetGlobalBuffer(HDShaderIDs.g_PackedClusterBuffer, s_PackedClusterBuffer);
+#if USE_PACKED_LIGHTLIST
+                    cmd.SetGlobalBuffer(HDShaderIDs.g_PackedLightListBuffer, s_PackedLightListBuffer);
 #else
                     cmd.SetGlobalBuffer(HDShaderIDs.g_vLayeredOffsetsBuffer, s_PerVoxelOffset);
                     if (k_UseDepthBuffer)

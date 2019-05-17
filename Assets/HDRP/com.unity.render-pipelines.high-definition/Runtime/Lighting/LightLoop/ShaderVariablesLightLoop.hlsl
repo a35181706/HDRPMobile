@@ -11,21 +11,24 @@
 
 #endif
 
-#ifdef USE_PACKED_CLUSTERDATA
-#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/PackedClusterData.cs.hlsl"
+#ifdef USE_PACKED_LIGHTLIST
+#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/PackedLightList.cs.hlsl"
 #endif
 
-#ifdef USE_PACKED_CLUSTERDATA
 
-StructuredBuffer<PackedClusterData> g_PackedClusterBuffer;
+// used for compute shader
+StructuredBuffer<uint>  g_vBigTileLightList;
+
+#ifdef USE_PACKED_LIGHTLIST
+
+StructuredBuffer<PackedLightList> g_PackedLightListBuffer;
 #else
 StructuredBuffer<uint>  g_vLayeredOffsetsBuffer;
 StructuredBuffer<float> g_logBaseBuffer;
+StructuredBuffer<uint>  g_vLightListGlobal;
 #endif
 
-    // don't support Buffer yet in unity
-    StructuredBuffer<uint>  g_vBigTileLightList;
-    StructuredBuffer<uint>  g_vLightListGlobal;
+
 
 
 #ifdef USE_INDIRECT

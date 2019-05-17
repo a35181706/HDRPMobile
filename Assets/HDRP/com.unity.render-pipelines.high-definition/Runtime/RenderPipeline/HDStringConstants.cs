@@ -7,7 +7,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         // ShaderPass string - use to have consistent name through the code
         public static readonly string s_EmptyStr = "";
         public static readonly string s_ForwardStr = "Forward";
-        public static readonly string s_ForwardAddStr = "ForwardAdd";
+        //public static readonly string s_ForwardAddStr = "ForwardAdd";
         public static readonly string s_DepthOnlyStr = "DepthOnly";
         public static readonly string s_DepthForwardOnlyStr = "DepthForwardOnly";
         public static readonly string s_ForwardOnlyStr = "ForwardOnly";
@@ -37,7 +37,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         // ShaderPass name
         public static readonly ShaderTagId s_EmptyName = new ShaderTagId(s_EmptyStr);
         public static readonly ShaderTagId s_ForwardName = new ShaderTagId(s_ForwardStr);
-        public static readonly ShaderTagId s_ForwardAddName = new ShaderTagId(s_ForwardAddStr);
+        //public static readonly ShaderTagId s_ForwardAddName = new ShaderTagId(s_ForwardAddStr);
         public static readonly ShaderTagId s_DepthOnlyName = new ShaderTagId(s_DepthOnlyStr);
         public static readonly ShaderTagId s_DepthForwardOnlyName = new ShaderTagId(s_DepthForwardOnlyStr);
         public static readonly ShaderTagId s_ForwardOnlyName = new ShaderTagId(s_ForwardOnlyStr);
@@ -123,7 +123,8 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         public static readonly int g_depth_tex = Shader.PropertyToID("g_depth_tex");
         public static readonly int g_vLayeredLightList = Shader.PropertyToID("g_vLayeredLightList");
         public static readonly int g_LayeredOffset = Shader.PropertyToID("g_LayeredOffset");
-        public static readonly int g_PackedClusterBuffer = Shader.PropertyToID("g_PackedClusterBuffer");
+        public static readonly int g_PackedLightListBuffer = Shader.PropertyToID("g_PackedLightListBuffer");
+        public static readonly int g_vLightListDim = Shader.PropertyToID("g_vLightListDim");
         public static readonly int g_vBigTileLightList = Shader.PropertyToID("g_vBigTileLightList");
         public static readonly int g_vLightListGlobal = Shader.PropertyToID("g_vLightListGlobal");
         public static readonly int g_logBaseBuffer = Shader.PropertyToID("g_logBaseBuffer");

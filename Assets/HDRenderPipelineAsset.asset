@@ -65,8 +65,8 @@ MonoBehaviour:
         m_Bits: 0
       supportFabricConvolution: 0
       maxDirectionalLightsOnScreen: 16
-      maxPunctualLightsOnScreen: 512
-      maxAreaLightsOnScreen: 64
+      maxPunctualLightsOnScreen: 64
+      maxAreaLightsOnScreen: 32
       maxEnvLightsOnScreen: 32
       maxDecalsOnScreen: 512
     hdShadowInitParams:

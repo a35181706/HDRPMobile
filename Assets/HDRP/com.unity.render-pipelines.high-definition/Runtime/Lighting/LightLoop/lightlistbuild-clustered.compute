@@ -10,6 +10,10 @@
 #pragma kernel TileLightListGen_DepthRT_SrcBigTile_Oblique          LIGHTLISTGEN=TileLightListGen_DepthRT_SrcBigTile_Oblique            ENABLE_DEPTH_TEXTURE_BACKPLANE          USE_TWO_PASS_TILED_LIGHTING				USE_OBLIQUE_MODE
 #pragma kernel TileLightListGen_DepthRT_MSAA_SrcBigTile_Oblique     LIGHTLISTGEN=TileLightListGen_DepthRT_MSAA_SrcBigTile_Oblique       ENABLE_DEPTH_TEXTURE_BACKPLANE			MSAA_ENABLED        USE_TWO_PASS_TILED_LIGHTING			USE_OBLIQUE_MODE
 
+#ifdef USE_PACKED_LIGHTLIST
+#pragma kernel FillFPTLLightList
+#endif
+
 #pragma kernel ClearAtomic
 
 // #pragma enable_d3d11_debug_symbols
@@ -20,8 +24,8 @@
 #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightingConvexHullUtils.hlsl"
 #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightCullUtils.hlsl"
 
-#ifdef USE_PACKED_CLUSTERDATA
-#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/PackedClusterData.cs.hlsl"
+#ifdef USE_PACKED_LIGHTLIST
+#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/PackedLightList.cs.hlsl"
 #endif
 
 #if !defined(SHADER_API_XBOXONE) && !defined(SHADER_API_PSSL) && !defined(SHADER_API_SWITCH)
@@ -74,10 +78,17 @@ StructuredBuffer<uint> g_vBigTileLightList : register( t4 );        // don't sup
 #define NR_THREADS              64                                  // default to 64 threads per group on other platforms..
 #endif
 
-#ifdef USE_PACKED_CLUSTERDATA
-RWStructuredBuffer<uint> g_vLayeredLightList : register(u0);          // don't support RWBuffer yet in unity
-RWStructuredBuffer<PackedClusterData> g_PackedClusterBuffer : register(u1);              // don't support RWBuffer yet in unity
-RWStructuredBuffer<uint> g_LayeredSingleIdxBuffer : register(u2);     // don't support RWBuffer yet in unity
+#ifdef USE_PACKED_LIGHTLIST
+//x-numTilesX,y-numTilesY,z-numTilesZ,w-LightList length
+uniform uint4 g_vLightListDim;
+RWStructuredBuffer<PackedLightList> g_PackedLightListBuffer : register(u0);              // don't support RWBuffer yet in unity
+RWStructuredBuffer<uint> g_LayeredSingleIdxBuffer : register(u1);     // don't support RWBuffer yet in unity
+#ifdef USE_TWO_PASS_TILED_LIGHTING
+StructuredBuffer<uint> g_vLightList : register(t5);
+#else
+StructuredBuffer<uint> g_vLightList : register(t4);
+#endif
+
 #else
 RWStructuredBuffer<uint> g_vLayeredLightList : register(u0);          // don't support RWBuffer yet in unity
 RWStructuredBuffer<uint> g_LayeredOffset : register(u1);              // don't support RWBuffer yet in unity
@@ -414,46 +425,53 @@ void LIGHTLISTGEN(uint threadID : SV_GroupIndex, uint3 u3GroupID : SV_GroupID)
     int categoryListCount[LIGHTCATEGORY_COUNT]; // number of direct lights, reflection probes, decals and density volumes
     ZERO_INITIALIZE_ARRAY(int, categoryListCount, LIGHTCATEGORY_COUNT);
 
-    uint offs = start;
-    for(int ll=0; ll<iNrCoarseLights; ll+=4)
-    {
-        int p = i>>2;
-        int m = i&3;
-        if(i<24) lightPlanes[6*m+p] = FetchPlane(min(iNrCoarseLights-1,ll+m), p, eyeIndex);
+#ifdef USE_PACKED_LIGHTLIST
+
+	uint offs = start;
+	for (int ll = 0; ll < iNrCoarseLights; ll += 4)
+	{
+		int p = i >> 2;
+		int m = i & 3;
+		if (i < 24) lightPlanes[6 * m + p] = FetchPlane(min(iNrCoarseLights - 1, ll + m), p, eyeIndex);
 
 #if NR_THREADS > PLATFORM_LANE_COUNT
-        GroupMemoryBarrierWithGroupSync();
+		GroupMemoryBarrierWithGroupSync();
 #endif
 
-        for(int l=ll; l<min(iNrCoarseLights,(ll+4)); l++)
-        {
-            if(offs<(start+iSpaceAvail) && i<nrClusters && CheckIntersection(l, i, viTilLL.xy, viTilUR.xy, suggestedBase, eyeIndex) )
-            {
-                const int lightVolIndex = GenerateLightCullDataIndex(coarseList[l], g_iNrVisibLights, eyeIndex);
-                uint lightCategory = _LightVolumeData[lightVolIndex].lightCategory;
-                ++categoryListCount[lightCategory];
-                g_vLayeredLightList[offs++] = coarseList[l] - shiftIndex[lightCategory];
-            }
-        }
+		for (int l = ll; l < min(iNrCoarseLights, (ll + 4)); l++)
+		{
+			if (offs < (start + iSpaceAvail) && i < nrClusters && CheckIntersection(l, i, viTilLL.xy, viTilUR.xy, suggestedBase, eyeIndex))
+			{
+				
+				const int lightVolIndex = GenerateLightCullDataIndex(coarseList[l], g_iNrVisibLights, eyeIndex);
+				uint lightCategory = _LightVolumeData[lightVolIndex].lightCategory;
+				++categoryListCount[lightCategory];
+
+				int index = offs++;
+
+				PackedLightList outData = g_PackedLightListBuffer[index];
+				outData.PerVoxelLightList = coarseList[l] - shiftIndex[lightCategory];
+				g_PackedLightListBuffer[index] = outData;
+			}
+		}
 
 #if NR_THREADS > PLATFORM_LANE_COUNT
-        GroupMemoryBarrierWithGroupSync();
+		GroupMemoryBarrierWithGroupSync();
 #endif
-    }
+	}
 
-    uint localOffs=0;
+	uint localOffs = 0;
 
-    offs = GenerateLayeredOffsetBufferIndex(0, tileIDX, i, nrTilesX, nrTilesY, nrClusters, eyeIndex);
+	offs = GenerateLayeredOffsetBufferIndex(0, tileIDX, i, nrTilesX, nrTilesY, nrClusters, eyeIndex);
 
-#ifdef USE_PACKED_CLUSTERDATA
 	for (int category = 0; category < LIGHTCATEGORY_COUNT; category++)
 	{
 		int numLights = min(categoryListCount[category], 31);        // only allow 5 bits
 		if (i < nrClusters)
 		{
-			PackedClusterData outData = g_PackedClusterBuffer[offs];
+			PackedLightList outData = g_PackedLightListBuffer[offs];
 			outData.layeredOffset = (start + localOffs) | (((uint) numLights) << 27);
-			g_PackedClusterBuffer[offs] = outData;
+			g_PackedLightListBuffer[offs] = outData;
 
 			offs += (nrClusters*nrTilesX*nrTilesY);
 			localOffs += categoryListCount[category];       // use unclamped count for localOffs
@@ -462,16 +480,48 @@ void LIGHTLISTGEN(uint threadID : SV_GroupIndex, uint3 u3GroupID : SV_GroupID)
 
 #ifdef ENABLE_DEPTH_TEXTURE_BACKPLANE
 	const uint logBaseIndex = GenerateLogBaseBufferIndex(tileIDX, nrTilesX, nrTilesY, eyeIndex);
-	if (threadID == 0) 
+	if (threadID == 0)
 	{
-		PackedClusterData outData = g_PackedClusterBuffer[logBaseIndex];
+		PackedLightList outData = g_PackedLightListBuffer[logBaseIndex];
 		outData.logBase = suggestedBase;
-		g_PackedClusterBuffer[logBaseIndex] = outData;
+		g_PackedLightListBuffer[logBaseIndex] = outData;
 
-	} 
+	}
 #endif
 
+
 #else
+	uint offs = start;
+	for (int ll = 0; ll < iNrCoarseLights; ll += 4)
+	{
+		int p = i >> 2;
+		int m = i & 3;
+		if (i < 24) lightPlanes[6 * m + p] = FetchPlane(min(iNrCoarseLights - 1, ll + m), p, eyeIndex);
+
+#if NR_THREADS > PLATFORM_LANE_COUNT
+		GroupMemoryBarrierWithGroupSync();
+#endif
+
+		for (int l = ll; l < min(iNrCoarseLights, (ll + 4)); l++)
+		{
+			if (offs < (start + iSpaceAvail) && i < nrClusters && CheckIntersection(l, i, viTilLL.xy, viTilUR.xy, suggestedBase, eyeIndex))
+			{
+				const int lightVolIndex = GenerateLightCullDataIndex(coarseList[l], g_iNrVisibLights, eyeIndex);
+				uint lightCategory = _LightVolumeData[lightVolIndex].lightCategory;
+				++categoryListCount[lightCategory];
+				g_vLayeredLightList[offs++] = coarseList[l] - shiftIndex[lightCategory];
+			}
+		}
+
+#if NR_THREADS > PLATFORM_LANE_COUNT
+		GroupMemoryBarrierWithGroupSync();
+#endif
+	}
+
+	uint localOffs = 0;
+
+	offs = GenerateLayeredOffsetBufferIndex(0, tileIDX, i, nrTilesX, nrTilesY, nrClusters, eyeIndex);
+
 	for (int category = 0; category < LIGHTCATEGORY_COUNT; category++)
 	{
 		int numLights = min(categoryListCount[category], 31);        // only allow 5 bits
@@ -489,6 +539,8 @@ void LIGHTLISTGEN(uint threadID : SV_GroupIndex, uint3 u3GroupID : SV_GroupID)
 #endif
 
 #endif
+
+
 
 }
 
@@ -555,12 +607,6 @@ int SphericalIntersectionTests(uint threadID, int iNrCoarseLights, float2 screen
     return lightOffsSph;
 }
 #endif
-
-
-
-
-
-
 
 #ifdef EXACT_EDGE_TESTS
 
@@ -680,3 +726,44 @@ void ClearAtomic(uint threadID : SV_GroupIndex, uint3 u3GroupID : SV_GroupID)
 {
     g_LayeredSingleIdxBuffer[0]=0;
 }
+
+#ifdef USE_PACKED_LIGHTLIST
+[numthreads(NR_THREADS, 1, 1)]
+void FillFPTLLightList(uint threadID : SV_GroupIndex, uint3 u3GroupID : SV_GroupID)
+{
+	//一共有多少个线程
+	uint allThreadNum = g_vLightListDim[0] * g_vLightListDim[1] * g_vLightListDim[2] * NR_THREADS;
+	uint allFptlLightListCount = g_vLightListDim[3];
+
+	//减去1，因为有可能不会被线程组整除，所以少一个线程，每个线程多做一点，最后一个线程就会把剩下的全部弄完
+	uint divdAllThreadNum = allThreadNum - 1;
+
+	//一个线程处理多少个数据
+	uint singleThreadProcesCout = allFptlLightListCount / divdAllThreadNum;
+
+	//这两个不需要，节省点操作
+	////多余的数，不能被整除的
+	//uint moreNum = allFptlLightListCount % allThreadNum;
+
+	////如果余数比整除的还好多，那么以余数作为标准
+	//singleThreadProcesCout = max(singleThreadProcesCout, moreNum);
+
+	//当前线程索引
+	uint currThreadIndex = (u3GroupID.x  + u3GroupID.y + u3GroupID.z) * NR_THREADS + threadID;
+
+	//当前线程处理的开始值
+	uint currThreadProcressStartIndex = currThreadIndex * singleThreadProcesCout;
+	
+	//结束值
+	uint currThreadProcressEndIndex = min(currThreadProcressStartIndex + singleThreadProcesCout, allFptlLightListCount);
+
+	for (uint i = currThreadProcressStartIndex; i < currThreadProcressEndIndex; i++)
+	{
+		PackedLightList outData = g_PackedLightListBuffer[i];
+		outData.FptlLightList = g_vLightList[i];
+		g_PackedLightListBuffer[i] = outData;
+
+	}
+
+}
+#endif

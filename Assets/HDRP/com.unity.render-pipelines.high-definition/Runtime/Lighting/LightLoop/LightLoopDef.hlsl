@@ -287,7 +287,7 @@ void GetCountAndStartTile(PositionInputs posInput, uint lightCategory, out uint 
 #endif
 
     // The first entry inside a tile is the number of light for lightCategory (thus the +0)
-    lightCount = g_vLightListGlobal[DWORD_PER_TILE * tileOffset + 0] & 0xffff;
+    lightCount = g_PackedLightListBuffer[DWORD_PER_TILE * tileOffset + 0].FptlLightList & 0xffff;
     start = tileOffset;
 }
 
@@ -307,7 +307,7 @@ uint FetchIndex(uint tileOffset, uint lightOffset)
 {
     const uint lightOffsetPlusOne = lightOffset + 1; // Add +1 as first slot is reserved to store number of light
     // Light index are store on 16bit
-    return (g_vLightListGlobal[DWORD_PER_TILE * tileOffset + (lightOffsetPlusOne >> 1)] >> ((lightOffsetPlusOne & 1) * DWORD_PER_TILE)) & 0xffff;
+    return (g_PackedLightListBuffer[DWORD_PER_TILE * tileOffset + (lightOffsetPlusOne >> 1)].FptlLightList >> ((lightOffsetPlusOne & 1) * DWORD_PER_TILE)) & 0xffff;
 }
 
 #elif defined(USE_CLUSTERED_LIGHTLIST)
@@ -325,8 +325,8 @@ uint GetLightClusterIndex(uint2 tileIndex, float linearDepth)
     if (g_isLogBaseBufferEnabled)
     {
         const uint logBaseIndex = GenerateLogBaseBufferIndex(tileIndex, _NumTileClusteredX, _NumTileClusteredY, unity_StereoEyeIndex);
-#ifdef USE_PACKED_CLUSTERDATA
-		logBase = g_PackedClusterBuffer[logBaseIndex].logBase;
+#ifdef USE_PACKED_LIGHTLIST
+		logBase = g_PackedLightListBuffer[logBaseIndex].logBase;
 #else
 		logBase = g_logBaseBuffer[logBaseIndex];
 #endif
@@ -342,8 +342,8 @@ void GetCountAndStartCluster(uint2 tileIndex, uint clusterIndex, uint lightCateg
 
     const int idx = GenerateLayeredOffsetBufferIndex(lightCategory, tileIndex, clusterIndex, _NumTileClusteredX, _NumTileClusteredY, nrClusters, unity_StereoEyeIndex);
 
-#ifdef USE_PACKED_CLUSTERDATA
-	uint dataPair = g_PackedClusterBuffer[idx].layeredOffset;
+#ifdef USE_PACKED_LIGHTLIST
+	uint dataPair = g_PackedLightListBuffer[idx].layeredOffset;
 #else
 	uint dataPair = g_vLayeredOffsetsBuffer[idx];
 #endif
@@ -371,7 +371,7 @@ void GetCountAndStart(PositionInputs posInput, uint lightCategory, out uint star
 
 uint FetchIndex(uint lightStart, uint lightOffset)
 {
-    return g_vLightListGlobal[lightStart + lightOffset];
+    return g_PackedLightListBuffer[lightStart + lightOffset].PerVoxelLightList;
 }
 
 #elif defined(USE_BIG_TILE_LIGHTLIST)
