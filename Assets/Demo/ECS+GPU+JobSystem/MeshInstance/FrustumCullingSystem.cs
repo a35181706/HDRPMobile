@@ -193,7 +193,7 @@ public class FrustumCullingSystem : JobComponentSystem
         };
     }
 
-    ComponentGroup boudingSpheres;
+    EntityQuery boudingSpheres;
 
     EndSimulationEntityCommandBufferSystem bannair;
 
@@ -202,8 +202,8 @@ public class FrustumCullingSystem : JobComponentSystem
     {
         cameraPlanes = new Plane[6];
 
-        boudingSpheres = GetComponentGroup(typeof(FurstumCullingComponent),typeof(LocalToWorld));
-        bannair = World.GetExistingManager<EndSimulationEntityCommandBufferSystem>();
+        boudingSpheres = GetEntityQuery(typeof(FurstumCullingComponent),typeof(LocalToWorld));
+        bannair = World.GetExistingSystem<EndSimulationEntityCommandBufferSystem>();
     }
 
 

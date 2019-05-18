@@ -18,7 +18,7 @@ public class InstanceRendererSystem : ComponentSystem
     // MeshInstanced最多1023个一次
     private Matrix4x4[]                 m_MatricesArray = new Matrix4x4[1023];
     private List<InstanceRenderer>  m_CacheduniqueRendererTypes = new List<InstanceRenderer>(10);
-    private ComponentGroup m_InstanceRendererGroup;
+    private EntityQuery m_InstanceRendererGroup;
     private CommandBuffer m_RenderCommandBuffer = null;
     private bool bInit = false;
 
@@ -40,7 +40,7 @@ public class InstanceRendererSystem : ComponentSystem
 
 	protected override void OnCreateManager()
 	{
-        m_InstanceRendererGroup = GetComponentGroup(ComponentType.ReadOnly<InstanceRenderer>(),
+        m_InstanceRendererGroup = GetEntityQuery(ComponentType.ReadOnly<InstanceRenderer>(),
             ComponentType.ReadOnly<LocalToWorld>(),
             ComponentType.Exclude<FurstumCulledComponent>());
 

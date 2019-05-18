@@ -24,7 +24,7 @@ public class InitDemo : MonoBehaviour
     void Start()
     {
         m_instance = this;
-        EntityManager entityMgr = World.Active.GetOrCreateManager<EntityManager>();
+        EntityManager entityMgr = World.Active.EntityManager;
 
         foreach (GameObject obj in swordPrefabs)
         {

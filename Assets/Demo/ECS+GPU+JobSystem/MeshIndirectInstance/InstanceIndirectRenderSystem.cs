@@ -17,7 +17,7 @@ using UnityEngine.Rendering;
 public class InstanceIndirectRenderSystem : ComponentSystem
 {
     private List<InstanceIndirectRenderer> m_CacheduniqueRendererTypes = new List<InstanceIndirectRenderer>(10);
-    private ComponentGroup m_InstanceRendererGroup;
+    private EntityQuery m_InstanceRendererGroup;
 
     private ComputeBuffer m_IndirecttArgsBuffer;
     private ComputeBuffer []m_TransformBuffers = null;
@@ -46,7 +46,7 @@ public class InstanceIndirectRenderSystem : ComponentSystem
 
     protected override void OnCreateManager()
     {
-        m_InstanceRendererGroup = GetComponentGroup(ComponentType.ReadOnly<InstanceIndirectRenderer>(),
+        m_InstanceRendererGroup = GetEntityQuery(ComponentType.ReadOnly<InstanceIndirectRenderer>(),
             ComponentType.ReadOnly<LocalToWorld>(),
             ComponentType.Exclude<FurstumCulledComponent>());    
     }

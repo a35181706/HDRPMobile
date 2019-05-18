@@ -11,7 +11,7 @@ public class JobGravitySystem : JobComponentSystem
 {
 
     [BurstCompile]
-    struct GravityJob : IJobProcessComponentData<GravityComponentData, Translation>
+    struct GravityJob : IJobForEach<GravityComponentData, Translation>
     {
         //运行在其它线程中，需要拷贝一份GravityJobSystem的数据
         public float G;
