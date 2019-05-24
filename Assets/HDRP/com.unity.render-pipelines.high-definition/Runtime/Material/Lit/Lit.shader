@@ -621,93 +621,95 @@ Shader "HDRP/Lit"
         }
 
         // Caution: Order is important: TransparentBackface, then Forward/ForwardOnly
-        Pass //TransparentBackface
-        {
-            Name "TransparentBackface"
-            Tags { "LightMode" = "TransparentBackface" }
+		Pass //TransparentBackface
+		{
+			Name "TransparentBackface"
+			Tags { "LightMode" = "TransparentBackface" }
 
-            Blend [_SrcBlend] [_DstBlend], [_AlphaSrcBlend] [_AlphaDstBlend]
-            ZWrite [_ZWrite]
-            Cull Front
-            ColorMask [_ColorMaskTransparentVel] 1
+			Blend[_SrcBlend][_DstBlend],[_AlphaSrcBlend][_AlphaDstBlend]
+			ZWrite[_ZWrite]
+			Cull Front
+			ColorMask[_ColorMaskTransparentVel] 1
 
-            HLSLPROGRAM
+			HLSLPROGRAM
 
-            #pragma multi_compile _ DEBUG_DISPLAY
-            #pragma multi_compile _ LIGHTMAP_ON
-            #pragma multi_compile _ DIRLIGHTMAP_COMBINED
-            #pragma multi_compile _ DYNAMICLIGHTMAP_ON
-            #pragma multi_compile _ SHADOWS_SHADOWMASK
-            // Setup DECALS_OFF so the shader stripper can remove variants
-            #pragma multi_compile DECALS_OFF DECALS_3RT DECALS_4RT
-            
+			#pragma multi_compile _ DEBUG_DISPLAY
+			#pragma multi_compile _ LIGHTMAP_ON
+			#pragma multi_compile _ DIRLIGHTMAP_COMBINED
+			#pragma multi_compile _ DYNAMICLIGHTMAP_ON
+			#pragma multi_compile _ SHADOWS_SHADOWMASK
+			// Setup DECALS_OFF so the shader stripper can remove variants
+			#pragma multi_compile DECALS_OFF DECALS_3RT DECALS_4RT
+
+			// Supported shadow modes per light type
+			#pragma multi_compile SHADOW_LOW SHADOW_MEDIUM SHADOW_HIGH SHADOW_VERY_HIGH
+
+			#define USE_CLUSTERED_LIGHTLIST // There is not FPTL lighting when using transparent
+
+			#define SHADERPASS SHADERPASS_FORWARD
+			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Material.hlsl"
+			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/Lighting.hlsl"
+
+		#ifdef DEBUG_DISPLAY
+			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Debug/DebugDisplay.hlsl"
+		#endif
+
+			// The light loop (or lighting architecture) is in charge to:
+			// - Define light list
+			// - Define the light loop
+			// - Setup the constant/data
+			// - Do the reflection hierarchy
+			// - Provide sampling function for shadowmap, ies, cookie and reflection (depends on the specific use with the light loops like index array or atlas or single and texture format (cubemap/latlong))
+
+			#define HAS_LIGHTLOOP
+
+			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoopDef.hlsl"
+			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/Lit.hlsl"
+			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoop.hlsl"
+
+			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/ShaderPass/LitSharePass.hlsl"
+			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/LitData.hlsl"
+			#include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/ShaderPassForward.hlsl"
+
+			#pragma vertex Vert
+			#pragma fragment Frag
+
+			ENDHLSL
+		}
+
+			Pass //Forward
+		{
+			Name "Forward"
+			Tags { "LightMode" = "Forward" } // This will be only for transparent object based on the RenderQueue index
+
+			Stencil
+			{
+				WriteMask[_StencilWriteMask]
+				Ref[_StencilRef]
+				Comp Always
+				Pass Replace
+			}
+
+			Blend[_SrcBlend][_DstBlend],[_AlphaSrcBlend][_AlphaDstBlend]
+			// In case of forward we want to have depth equal for opaque mesh
+			ZTest[_ZTestDepthEqualForOpaque]
+			ZWrite[_ZWrite]
+			Cull[_CullModeForward]
+			ColorMask[_ColorMaskTransparentVel] 1
+
+			HLSLPROGRAM
+
+			#pragma multi_compile _ DEBUG_DISPLAY
+			#pragma multi_compile _ LIGHTMAP_ON
+			#pragma multi_compile _ DIRLIGHTMAP_COMBINED
+			#pragma multi_compile _ DYNAMICLIGHTMAP_ON
+			#pragma multi_compile _ SHADOWS_SHADOWMASK
+			// Setup DECALS_OFF so the shader stripper can remove variants
+		   // #pragma multi_compile DECALS_OFF DECALS_3RT DECALS_4RT
+#define DECALS_OFF
+#define SHADOW_LOW
             // Supported shadow modes per light type
-            #pragma multi_compile SHADOW_LOW SHADOW_MEDIUM SHADOW_HIGH SHADOW_VERY_HIGH
-
-            #define USE_CLUSTERED_LIGHTLIST // There is not FPTL lighting when using transparent
-
-            #define SHADERPASS SHADERPASS_FORWARD
-            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Material.hlsl"
-            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/Lighting.hlsl"
-
-        #ifdef DEBUG_DISPLAY
-            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Debug/DebugDisplay.hlsl"
-        #endif
-
-            // The light loop (or lighting architecture) is in charge to:
-            // - Define light list
-            // - Define the light loop
-            // - Setup the constant/data
-            // - Do the reflection hierarchy
-            // - Provide sampling function for shadowmap, ies, cookie and reflection (depends on the specific use with the light loops like index array or atlas or single and texture format (cubemap/latlong))
-
-            #define HAS_LIGHTLOOP
-
-            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoopDef.hlsl"
-            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/Lit.hlsl"
-            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoop.hlsl"
-
-            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/ShaderPass/LitSharePass.hlsl"
-            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/LitData.hlsl"
-            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/ShaderPassForward.hlsl"
-
-            #pragma vertex Vert
-            #pragma fragment Frag
-
-            ENDHLSL
-        }
-
-        Pass //Forward
-        {
-            Name "Forward"
-            Tags { "LightMode" = "Forward" } // This will be only for transparent object based on the RenderQueue index
-
-            Stencil
-            {
-                WriteMask [_StencilWriteMask]
-                Ref [_StencilRef]
-                Comp Always
-                Pass Replace
-            }
-
-            Blend [_SrcBlend] [_DstBlend], [_AlphaSrcBlend] [_AlphaDstBlend]
-            // In case of forward we want to have depth equal for opaque mesh
-            ZTest [_ZTestDepthEqualForOpaque]
-            ZWrite [_ZWrite]
-            Cull [_CullModeForward]
-            ColorMask [_ColorMaskTransparentVel] 1
-
-            HLSLPROGRAM
-
-            #pragma multi_compile _ DEBUG_DISPLAY
-            #pragma multi_compile _ LIGHTMAP_ON
-            #pragma multi_compile _ DIRLIGHTMAP_COMBINED
-            #pragma multi_compile _ DYNAMICLIGHTMAP_ON
-            #pragma multi_compile _ SHADOWS_SHADOWMASK
-            // Setup DECALS_OFF so the shader stripper can remove variants
-            #pragma multi_compile DECALS_OFF DECALS_3RT DECALS_4RT
-            // Supported shadow modes per light type
-            #pragma multi_compile SHADOW_LOW SHADOW_MEDIUM SHADOW_HIGH SHADOW_VERY_HIGH
+           // #pragma multi_compile SHADOW_LOW SHADOW_MEDIUM SHADOW_HIGH SHADOW_VERY_HIGH
 
             #pragma multi_compile USE_FPTL_LIGHTLIST USE_CLUSTERED_LIGHTLIST
 
@@ -734,11 +736,11 @@ Shader "HDRP/Lit"
             #define HAS_LIGHTLOOP
 
             #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoopDef.hlsl"
-            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/Lit.hlsl"
+            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/Lit_Custom.hlsl"
             #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoop_Custom.hlsl"
 
             #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/ShaderPass/LitSharePass.hlsl"
-            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/LitData.hlsl"
+            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/LitData_Custom.hlsl"
             #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/ShaderPassForward_Custom.hlsl"
 
             #pragma vertex Vert

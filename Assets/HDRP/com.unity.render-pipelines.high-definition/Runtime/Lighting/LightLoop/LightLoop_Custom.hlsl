@@ -498,11 +498,11 @@ void LightLoop(float3 V, PositionInputs posInput, PreLightData preLightData, BSD
 
 	LightLoop_DirectLightShadow(context, V, posInput, bsdfData, featureFlags);
 
-	LightLoop_PunctalLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
+	//LightLoop_PunctalLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
 	LightLoop_DirectLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
 	LightLoop_EnvAndSkyAndSSR(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
-	LightLoop_AreaLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
-	
+	//LightLoop_AreaLight(context, V, posInput, preLightData, bsdfData, builtinData, featureFlags, aggregateLighting);
+	//
 
 
 	// Also Apply indiret diffuse (GI)

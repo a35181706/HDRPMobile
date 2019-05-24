@@ -23,6 +23,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         SphericalHarmonicsL2        m_AmbientProbe;
         readonly int                m_AmbientProbeOutputBufferParam = Shader.PropertyToID("_AmbientProbeOutputBuffer");
         readonly int                m_AmbientProbeInputCubemap = Shader.PropertyToID("_AmbientProbeInputCubemap");
+        readonly int                m_AmbientProbeInputCubemapDimensions = Shader.PropertyToID("_AmbientProbeInputCubemapDimensions");
         int                         m_ComputeAmbientProbeKernel;
 
 
@@ -247,13 +248,18 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                                 using (new ProfilingSample(cmd, "Update Ambient Probe"))
                                 {
                                     cmd.SetComputeBufferParam(m_ComputeAmbientProbeCS, m_ComputeAmbientProbeKernel, m_AmbientProbeOutputBufferParam, m_AmbientProbeResult);
+                                    Vector4 dimss = Vector4.zero;
+                                    dimss.x = m_SkyboxCubemapRT.rt.width;
+                                    dimss.y = m_SkyboxCubemapRT.rt.height;
+                                    dimss.z = 0;
                                     cmd.SetComputeTextureParam(m_ComputeAmbientProbeCS, m_ComputeAmbientProbeKernel, m_AmbientProbeInputCubemap, m_SkyboxCubemapRT);
+                                    cmd.SetComputeVectorParam(m_ComputeAmbientProbeCS, m_AmbientProbeInputCubemapDimensions, dimss);
                                     cmd.DispatchCompute(m_ComputeAmbientProbeCS, m_ComputeAmbientProbeKernel, 1, 1, 1);
                                     cmd.RequestAsyncReadback(m_AmbientProbeResult, OnComputeAmbientProbeDone);
                                 }
                             }
                         }
-
+                     
                         if (m_SupportsConvolution)
                         {
                             using (new ProfilingSample(cmd, "Update Env: Convolve Lighting Cubemap"))
@@ -261,7 +267,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                                 RenderCubemapGGXConvolution(skyContext);
                             }
                         }
-
+                        
                         result = true;
                         skyContext.skyParametersHash = skyHash;
                         skyContext.currentUpdateTime = 0.0f;

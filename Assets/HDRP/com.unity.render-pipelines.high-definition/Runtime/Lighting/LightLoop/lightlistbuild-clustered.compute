@@ -428,11 +428,24 @@ void LIGHTLISTGEN(uint threadID : SV_GroupIndex, uint3 u3GroupID : SV_GroupID)
 #ifdef USE_PACKED_LIGHTLIST
 
 	uint offs = start;
+
+	const int p = i >> 2;
+	const int m = i & 3;
+	//填充plane
+	if (i < 24)
+	{
+		for (int ll_plane = 0; ll_plane < iNrCoarseLights; ll_plane += 4)
+		{
+			lightPlanes[6 * m + p] = FetchPlane(min(iNrCoarseLights - 1, ll_plane + m), p, eyeIndex);
+		}
+	}
+
+
 	for (int ll = 0; ll < iNrCoarseLights; ll += 4)
 	{
-		int p = i >> 2;
-		int m = i & 3;
-		if (i < 24) lightPlanes[6 * m + p] = FetchPlane(min(iNrCoarseLights - 1, ll + m), p, eyeIndex);
+		//int p = i >> 2;
+		//int m = i & 3;
+		//if (i < 24) lightPlanes[6 * m + p] = FetchPlane(min(iNrCoarseLights - 1, ll + m), p, eyeIndex);
 
 #if NR_THREADS > PLATFORM_LANE_COUNT
 		GroupMemoryBarrierWithGroupSync();
@@ -492,11 +505,24 @@ void LIGHTLISTGEN(uint threadID : SV_GroupIndex, uint3 u3GroupID : SV_GroupID)
 
 #else
 	uint offs = start;
+
+	const int p = i >> 2;
+	const int m = i & 3;
+	//填充plane
+	if (i < 24)
+	{
+		for (int ll_plane = 0; ll_plane < iNrCoarseLights; ll_plane += 4)
+		{
+			lightPlanes[6 * m + p] = FetchPlane(min(iNrCoarseLights - 1, ll_plane + m), p, eyeIndex);
+		}
+	}
+
+
 	for (int ll = 0; ll < iNrCoarseLights; ll += 4)
 	{
-		int p = i >> 2;
-		int m = i & 3;
-		if (i < 24) lightPlanes[6 * m + p] = FetchPlane(min(iNrCoarseLights - 1, ll + m), p, eyeIndex);
+		//int p = i >> 2;
+		//int m = i & 3;
+		//if (i < 24) lightPlanes[6 * m + p] = FetchPlane(min(iNrCoarseLights - 1, ll + m), p, eyeIndex);
 
 #if NR_THREADS > PLATFORM_LANE_COUNT
 		GroupMemoryBarrierWithGroupSync();
@@ -736,7 +762,8 @@ void FillFPTLLightList(uint threadID : SV_GroupIndex, uint3 u3GroupID : SV_Group
 	uint allFptlLightListCount = g_vLightListDim[3];
 
 	//减去1，因为有可能不会被线程组整除，所以少一个线程，每个线程多做一点，最后一个线程就会把剩下的全部弄完
-	uint divdAllThreadNum = allThreadNum - 1;
+	uint divdAllThreadNum = allThreadNum / 2;
+
 
 	//一个线程处理多少个数据
 	uint singleThreadProcesCout = allFptlLightListCount / divdAllThreadNum;
