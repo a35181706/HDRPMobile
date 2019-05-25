@@ -762,7 +762,7 @@ void FillFPTLLightList(uint threadID : SV_GroupIndex, uint3 u3GroupID : SV_Group
 	uint allFptlLightListCount = g_vLightListDim[3];
 
 	//减去1，因为有可能不会被线程组整除，所以少一个线程，每个线程多做一点，最后一个线程就会把剩下的全部弄完
-	uint divdAllThreadNum = allThreadNum / 2;
+	uint divdAllThreadNum = allThreadNum - 1;
 
 
 	//一个线程处理多少个数据

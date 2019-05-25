@@ -705,11 +705,9 @@ Shader "HDRP/Lit"
 			#pragma multi_compile _ DYNAMICLIGHTMAP_ON
 			#pragma multi_compile _ SHADOWS_SHADOWMASK
 			// Setup DECALS_OFF so the shader stripper can remove variants
-		   // #pragma multi_compile DECALS_OFF DECALS_3RT DECALS_4RT
-#define DECALS_OFF
-#define SHADOW_LOW
+		    #pragma multi_compile DECALS_OFF DECALS_3RT DECALS_4RT
             // Supported shadow modes per light type
-           // #pragma multi_compile SHADOW_LOW SHADOW_MEDIUM SHADOW_HIGH SHADOW_VERY_HIGH
+            #pragma multi_compile SHADOW_LOW SHADOW_MEDIUM SHADOW_HIGH SHADOW_VERY_HIGH
 
             #pragma multi_compile USE_FPTL_LIGHTLIST USE_CLUSTERED_LIGHTLIST
 
@@ -736,11 +734,11 @@ Shader "HDRP/Lit"
             #define HAS_LIGHTLOOP
 
             #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoopDef.hlsl"
-            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/Lit_Custom.hlsl"
+            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/Lit.hlsl"
             #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/LightLoop_Custom.hlsl"
 
             #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/ShaderPass/LitSharePass.hlsl"
-            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/LitData_Custom.hlsl"
+            #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Material/Lit/LitData.hlsl"
             #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/ShaderPassForward_Custom.hlsl"
 
             #pragma vertex Vert
