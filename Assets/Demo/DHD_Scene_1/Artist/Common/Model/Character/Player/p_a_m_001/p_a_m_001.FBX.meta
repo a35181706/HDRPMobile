@@ -1,0 +1,191 @@
+fileFormatVersion: 2
+guid: 652d99f6607ff84469260f1b19cb08b4
+ModelImporter:
+  serializedVersion: 22
+  fileIDToRecycleName:
+    100000: B_QB_Bone01
+    100002: B_QB_Bone02
+    100004: B_QB_Bone03
+    100006: Bip
+    100008: Bip_Head
+    100010: Bip_L_Calf
+    100012: Bip_L_Clavicle
+    100014: Bip_L_Foot
+    100016: Bip_L_Forearm
+    100018: Bip_L_Hand
+    100020: Bip_L_Thigh
+    100022: Bip_L_UpperArm
+    100024: Bip_Neck
+    100026: Bip_Pelvis
+    100028: Bip_Prop1
+    100030: Bip_Prop2
+    100032: Bip_Prop3
+    100034: Bip_R_Calf
+    100036: Bip_R_Clavicle
+    100038: Bip_R_Foot
+    100040: Bip_R_Forearm
+    100042: Bip_R_Hand
+    100044: Bip_R_Thigh
+    100046: Bip_R_UpperArm
+    100048: Bip_Spine
+    100050: Bip_Spine1
+    100052: F_QB_Bone01
+    100054: F_QB_Bone02
+    100056: F_QB_Bone03
+    100058: L_QB_Bone01
+    100060: L_QB_Bone02
+    100062: L_QB_Bone03
+    100064: L_XZ_Bone01
+    100066: L_XZ_Bone02
+    100068: L_XZ_Bone03
+    100070: //RootNode
+    100072: p_a_m_001
+    100074: R_QB_Bone01
+    100076: R_QB_Bone02
+    100078: R_QB_Bone03
+    100080: R_XZ_Bone01
+    100082: R_XZ_Bone02
+    100084: R_XZ_Bone03
+    100086: TF_Bone01
+    100088: TF_Bone02
+    100090: TF_Bone03
+    400000: B_QB_Bone01
+    400002: B_QB_Bone02
+    400004: B_QB_Bone03
+    400006: Bip
+    400008: Bip_Head
+    400010: Bip_L_Calf
+    400012: Bip_L_Clavicle
+    400014: Bip_L_Foot
+    400016: Bip_L_Forearm
+    400018: Bip_L_Hand
+    400020: Bip_L_Thigh
+    400022: Bip_L_UpperArm
+    400024: Bip_Neck
+    400026: Bip_Pelvis
+    400028: Bip_Prop1
+    400030: Bip_Prop2
+    400032: Bip_Prop3
+    400034: Bip_R_Calf
+    400036: Bip_R_Clavicle
+    400038: Bip_R_Foot
+    400040: Bip_R_Forearm
+    400042: Bip_R_Hand
+    400044: Bip_R_Thigh
+    400046: Bip_R_UpperArm
+    400048: Bip_Spine
+    400050: Bip_Spine1
+    400052: F_QB_Bone01
+    400054: F_QB_Bone02
+    400056: F_QB_Bone03
+    400058: L_QB_Bone01
+    400060: L_QB_Bone02
+    400062: L_QB_Bone03
+    400064: L_XZ_Bone01
+    400066: L_XZ_Bone02
+    400068: L_XZ_Bone03
+    400070: p_a_m_001
+    400072: //RootNode
+    400074: R_QB_Bone01
+    400076: R_QB_Bone02
+    400078: R_QB_Bone03
+    400080: R_XZ_Bone01
+    400082: R_XZ_Bone02
+    400084: R_XZ_Bone03
+    400086: TF_Bone01
+    400088: TF_Bone02
+    400090: TF_Bone03
+    2100000: p_a_m_001
+    2100002: p_a_m_hair
+    4300000: p_a_m_001
+    9500000: //RootNode
+    13700000: p_a_m_001
+  externalObjects: {}
+  materials:
+    importMaterials: 0
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 1
+    motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths:
+    - Bip
+    - Bip_Pelvis
+    - Bip_Prop1
+    - Bip_Prop2
+    - Bip_Prop3
+    - Bip_Spine1
+    - Bip_L_Hand
+    - Bip_R_Hand
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 1
+    addColliders: 0
+    importVisibility: 1
+    importBlendShapes: 0
+    importCameras: 1
+    importLights: 1
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    optimizeMeshForGPU: 1
+    keepQuads: 0
+    weldVertices: 1
+    preserveHierarchy: 0
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 2
+    normalCalculationMode: 4
+  importAnimation: 0
+  copyAvatar: 0
+  humanDescription:
+    serializedVersion: 2
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    rootMotionBoneName: 
+    rootMotionBoneRotation: {x: 0, y: 0, z: 0, w: 1}
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  animationType: 2
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
