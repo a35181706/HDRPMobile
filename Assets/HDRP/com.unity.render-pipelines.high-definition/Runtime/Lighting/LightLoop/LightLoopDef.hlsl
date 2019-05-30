@@ -286,8 +286,13 @@ void GetCountAndStartTile(PositionInputs posInput, uint lightCategory, out uint 
     tileOffset += unity_StereoEyeIndex * _NumTileFtplX * _NumTileFtplY * LIGHTCATEGORY_COUNT;
 #endif
 
+#ifdef USE_PACKED_LIGHTLIST
     // The first entry inside a tile is the number of light for lightCategory (thus the +0)
     lightCount = g_PackedLightListBuffer[DWORD_PER_TILE * tileOffset + 0].FptlLightList & 0xffff;
+#else
+	lightCount = g_vLightListGlobal[DWORD_PER_TILE * tileOffset + 0] & 0xffff;
+#endif
+
     start = tileOffset;
 }
 
@@ -305,9 +310,17 @@ void GetCountAndStart(PositionInputs posInput, uint lightCategory, out uint star
 
 uint FetchIndex(uint tileOffset, uint lightOffset)
 {
+
     const uint lightOffsetPlusOne = lightOffset + 1; // Add +1 as first slot is reserved to store number of light
-    // Light index are store on 16bit
-    return (g_PackedLightListBuffer[DWORD_PER_TILE * tileOffset + (lightOffsetPlusOne >> 1)].FptlLightList >> ((lightOffsetPlusOne & 1) * DWORD_PER_TILE)) & 0xffff;
+
+#ifdef USE_PACKED_LIGHTLIST
+// The first entry inside a tile is the number of light for lightCategory (thus the +0)
+	return (g_PackedLightListBuffer[DWORD_PER_TILE * tileOffset + (lightOffsetPlusOne >> 1)].FptlLightList >> ((lightOffsetPlusOne & 1) * DWORD_PER_TILE)) & 0xffff;
+#else
+	return g_vLightListGlobal[DWORD_PER_TILE * tileOffset + 0] >> ((lightOffsetPlusOne & 1) * DWORD_PER_TILE) & 0xffff;
+#endif
+
+
 }
 
 #elif defined(USE_CLUSTERED_LIGHTLIST)
@@ -371,7 +384,12 @@ void GetCountAndStart(PositionInputs posInput, uint lightCategory, out uint star
 
 uint FetchIndex(uint lightStart, uint lightOffset)
 {
-    return g_PackedLightListBuffer[lightStart + lightOffset].PerVoxelLightList;
+#ifdef USE_PACKED_LIGHTLIST
+	return g_PackedLightListBuffer[lightStart + lightOffset].PerVoxelLightList;
+#else
+	return g_vLightListGlobal[lightStart + lightOffset];
+#endif
+
 }
 
 #elif defined(USE_BIG_TILE_LIGHTLIST)

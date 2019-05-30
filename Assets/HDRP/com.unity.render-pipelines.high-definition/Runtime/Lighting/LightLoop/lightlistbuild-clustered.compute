@@ -10,10 +10,8 @@
 #pragma kernel TileLightListGen_DepthRT_SrcBigTile_Oblique          LIGHTLISTGEN=TileLightListGen_DepthRT_SrcBigTile_Oblique            ENABLE_DEPTH_TEXTURE_BACKPLANE          USE_TWO_PASS_TILED_LIGHTING				USE_OBLIQUE_MODE
 #pragma kernel TileLightListGen_DepthRT_MSAA_SrcBigTile_Oblique     LIGHTLISTGEN=TileLightListGen_DepthRT_MSAA_SrcBigTile_Oblique       ENABLE_DEPTH_TEXTURE_BACKPLANE			MSAA_ENABLED        USE_TWO_PASS_TILED_LIGHTING			USE_OBLIQUE_MODE
 
-#ifdef USE_PACKED_LIGHTLIST
-#pragma kernel FillFPTLLightList
-#endif
 
+#pragma kernel FillFPTLLightList
 #pragma kernel ClearAtomic
 
 // #pragma enable_d3d11_debug_symbols
@@ -26,10 +24,16 @@
 
 #ifdef USE_PACKED_LIGHTLIST
 #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/PackedLightList.cs.hlsl"
+
 #endif
+
 
 #if !defined(SHADER_API_XBOXONE) && !defined(SHADER_API_PSSL) && !defined(SHADER_API_SWITCH)
 #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/LightLoop/SortingComputeUtils.hlsl"
+#endif
+
+#ifdef USE_PACKED_LIGHTLIST
+
 #endif
 
 #pragma only_renderers d3d11 ps4 xboxone vulkan metal switch
@@ -754,6 +758,7 @@ void ClearAtomic(uint threadID : SV_GroupIndex, uint3 u3GroupID : SV_GroupID)
 }
 
 #ifdef USE_PACKED_LIGHTLIST
+
 [numthreads(NR_THREADS, 1, 1)]
 void FillFPTLLightList(uint threadID : SV_GroupIndex, uint3 u3GroupID : SV_GroupID)
 {
@@ -791,6 +796,13 @@ void FillFPTLLightList(uint threadID : SV_GroupIndex, uint3 u3GroupID : SV_Group
 		g_PackedLightListBuffer[i] = outData;
 
 	}
+
+}
+#else
+[numthreads(1, 1, 1)]
+void FillFPTLLightList(uint threadID : SV_GroupIndex, uint3 u3GroupID : SV_GroupID)
+{
+
 
 }
 #endif
