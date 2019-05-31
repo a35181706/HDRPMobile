@@ -13,14 +13,16 @@ public class Boot : MonoBehaviour
 {
 
     public List<SceneInfo> sceneList = new List<SceneInfo>();
+    static bool seting = false;
     // Start is called before the first frame update
     void Start()
     {
-        //if (!Application.isEditor)
+        //if (!Application.isEditor && !seting)
         //{
+        //    seting = true;
         //    Screen.SetResolution((int)(Screen.width * 0.5f), (int)(Screen.height * 0.5f), true);
         //}
-        
+
     }
 
     Vector2 scrollPos = Vector2.zero;
