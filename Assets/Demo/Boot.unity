@@ -132,7 +132,6 @@ GameObject:
   - component: {fileID: 1052712372}
   - component: {fileID: 1052712371}
   - component: {fileID: 1052712370}
-  - component: {fileID: 1052712374}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -223,7 +222,7 @@ MonoBehaviour:
   maxSmoothness: 0.99
   applyRangeAttenuation: 1
   useOldInspector: 0
-  useVolumetric: 1
+  useVolumetric: 0
   featuresFoldout: 1
   showAdditionalSettings: 0
   displayLightIntensity: 3.1415927
@@ -317,19 +316,58 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
---- !u!114 &1052712374
+--- !u!1 &1395646741
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1395646743}
+  - component: {fileID: 1395646742}
+  m_Layer: 0
+  m_Name: Boot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1395646742
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1052712369}
+  m_GameObject: {fileID: 1395646741}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2e2047bdc6f5c1a4eac995bf08e6d6ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  WaitTime: 3
+  sceneList:
+  - sceneName: ECS+GPU+Job
+    sceneDesc: GPUInstance+ECS+JOB
+  - sceneName: Light
+    sceneDesc: "\u5149\u7167\u7279\u6027\u6D4B\u8BD5"
+  - sceneName: FinalFeature
+    sceneDesc: "Unity\u793A\u4F8BDemo"
+  - sceneName: 1_ori
+    sceneDesc: "\u4EE3\u53F7D\u7684\u573A\u666F"
+--- !u!4 &1395646743
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1395646741}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 2
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2127325914
 GameObject:
   m_ObjectHideFlags: 0

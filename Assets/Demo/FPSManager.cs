@@ -18,6 +18,10 @@ public class FPSManager : MonoBehaviour {
     private void OnGUI()
     {
         GUILayout.Label("FPS:" + FPSManager.fps);
+        if(GUILayout.Button("返回主页", GUILayout.Width(200), GUILayout.Height(100)))
+        {
+            UnityEngine.SceneManagement.SceneManager.LoadSceneAsync("Boot", UnityEngine.SceneManagement.LoadSceneMode.Single);
+        }
     }
 
     void Start()
