@@ -435,21 +435,14 @@ void LIGHTLISTGEN(uint threadID : SV_GroupIndex, uint3 u3GroupID : SV_GroupID)
 
 	const int p = i >> 2;
 	const int m = i & 3;
-	//野割plane
-	if (i < 24)
-	{
-		for (int ll_plane = 0; ll_plane < iNrCoarseLights; ll_plane += 4)
-		{
-			lightPlanes[6 * m + p] = FetchPlane(min(iNrCoarseLights - 1, ll_plane + m), p, eyeIndex);
-		}
-	}
 
 
 	for (int ll = 0; ll < iNrCoarseLights; ll += 4)
 	{
-		//int p = i >> 2;
-		//int m = i & 3;
-		//if (i < 24) lightPlanes[6 * m + p] = FetchPlane(min(iNrCoarseLights - 1, ll + m), p, eyeIndex);
+		[BRANCH] if (i < 24)
+		{
+			lightPlanes[6 * m + p] = FetchPlane(min(iNrCoarseLights - 1, ll + m), p, eyeIndex);
+		}
 
 #if NR_THREADS > PLATFORM_LANE_COUNT
 		GroupMemoryBarrierWithGroupSync();
@@ -512,21 +505,13 @@ void LIGHTLISTGEN(uint threadID : SV_GroupIndex, uint3 u3GroupID : SV_GroupID)
 
 	const int p = i >> 2;
 	const int m = i & 3;
-	//野割plane
-	if (i < 24)
-	{
-		for (int ll_plane = 0; ll_plane < iNrCoarseLights; ll_plane += 4)
-		{
-			lightPlanes[6 * m + p] = FetchPlane(min(iNrCoarseLights - 1, ll_plane + m), p, eyeIndex);
-		}
-	}
-
 
 	for (int ll = 0; ll < iNrCoarseLights; ll += 4)
 	{
-		//int p = i >> 2;
-		//int m = i & 3;
-		//if (i < 24) lightPlanes[6 * m + p] = FetchPlane(min(iNrCoarseLights - 1, ll + m), p, eyeIndex);
+		[BRANCH] if (i < 24)
+		{
+			lightPlanes[6 * m + p] = FetchPlane(min(iNrCoarseLights - 1, ll + m), p, eyeIndex);
+		}
 
 #if NR_THREADS > PLATFORM_LANE_COUNT
 		GroupMemoryBarrierWithGroupSync();
