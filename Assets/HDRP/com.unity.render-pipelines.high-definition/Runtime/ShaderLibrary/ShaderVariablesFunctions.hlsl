@@ -132,12 +132,22 @@ float2 GetViewportScalePreviousFrame()
 
 float4 SampleSkyTexture(float3 texCoord, int sliceIndex)
 {
-    return SAMPLE_TEXTURECUBE_ARRAY(_SkyTexture, s_trilinear_clamp_sampler, texCoord, sliceIndex);
+#ifdef SKYBOX_USE_SINGLE_BSDF_CUBEMAP
+	return SAMPLE_TEXTURECUBE(_SkyTexture, s_trilinear_clamp_sampler, texCoord);
+#else
+	return SAMPLE_TEXTURECUBE_ARRAY(_SkyTexture, s_trilinear_clamp_sampler, texCoord, sliceIndex);
+#endif
+    
 }
 
 float4 SampleSkyTexture(float3 texCoord, float lod, int sliceIndex)
 {
-    return SAMPLE_TEXTURECUBE_ARRAY_LOD(_SkyTexture, s_trilinear_clamp_sampler, texCoord, sliceIndex, lod);
+#ifdef SKYBOX_USE_SINGLE_BSDF_CUBEMAP
+	return SAMPLE_TEXTURECUBE_LOD(_SkyTexture, s_trilinear_clamp_sampler, texCoord, lod);
+#else
+	return SAMPLE_TEXTURECUBE_ARRAY_LOD(_SkyTexture, s_trilinear_clamp_sampler, texCoord, sliceIndex, lod);
+#endif
+    
 }
 
 float2 TexCoordStereoOffset(float2 texCoord)

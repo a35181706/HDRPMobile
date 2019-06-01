@@ -2,7 +2,12 @@
     #include "Assets/HDRP/com.unity.render-pipelines.high-definition/Runtime/Lighting/AtmosphericScattering/ShaderVariablesAtmosphericScattering.cs.hlsl"
 #else
     TEXTURE3D(_VBufferLighting);
-    TEXTURECUBE_ARRAY(_SkyTexture);
+#ifdef SKYBOX_USE_SINGLE_BSDF_CUBEMAP
+	TEXTURECUBE(_SkyTexture);
+#else
+	TEXTURECUBE_ARRAY(_SkyTexture);
+#endif
+    
 
     #define _MipFogNear                     _MipFogParameters.x
     #define _MipFogFar                      _MipFogParameters.y
