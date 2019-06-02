@@ -145,5 +145,5 @@
 #define USE_PACKED_SHADOWDATA //使用pakcedshadow
 #define USE_PACKED_LIGHTDATA //开启PackedLightData
 #define USE_PACKED_LIGHTLIST //开启USE_PACKED_LIGHTLIST
-#define SKYBOX_USE_SINGLE_BSDF_CUBEMAP //skybox使用单个bsdf的cubemap
+#define FOG_USE_SINGLE_CUBEMAP //Fog使用单个CubeMap
 

@@ -195,8 +195,8 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         public void SetGlobalSkyTexture(CommandBuffer cmd)
         {
             cmd.SetGlobalTexture(HDShaderIDs._SkyTexture, skyReflection);
-            float mipCount = Mathf.Clamp(Mathf.Log((float)skyReflection.width, 2.0f) + 1, 0.0f, 6.0f);
-            cmd.SetGlobalFloat(HDShaderIDs._SkyTextureMipCount, mipCount);
+            cmd.SetGlobalTexture(HDShaderIDs._FogTexture, m_SkyRenderingContext.fogTexture);
+            cmd.SetGlobalFloat(HDShaderIDs._SkyTextureMipCount, m_SkyRenderingContext.SkyTextureMipCount);
         }
 
 #if UNITY_EDITOR

@@ -1,4 +1,4 @@
-#define SKYBOX_USE_SINGLE_BSDF_CUBEMAP
+#define FOG_USE_SINGLE_CUBEMAP
 using UnityEngine.Rendering;
 using System;
 
@@ -6,36 +6,55 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 {
     internal class SkyRenderingContext
     {
-        IBLFilterBSDF[]             m_IBLFilterArray;
-        RTHandleSystem.RTHandle     m_SkyboxCubemapRT;
-        RTHandleSystem.RTHandle     m_SkyboxBSDFCubemapIntermediate;
-#if SKYBOX_USE_SINGLE_BSDF_CUBEMAP
-        Cubemap m_SkyboxBSDFCubemapArray;
-#else
-        CubemapArray m_SkyboxBSDFCubemapArray;
+        IBLFilterBSDF[] m_IBLFilterArray;
+        RTHandleSystem.RTHandle m_SkyboxCubemapRT;
+        RTHandleSystem.RTHandle m_SkyboxBSDFCubemapIntermediate;
+
+#if FOG_USE_SINGLE_CUBEMAP
+        Cubemap m_FogCubeMap = null;
+        IBLFilterBSDF ggxFilter = null;
 #endif
+        CubemapArray m_SkyboxBSDFCubemapArray;
+        RTHandleSystem.RTHandle m_SkyboxMarginalRowCdfRT;
+        RTHandleSystem.RTHandle m_SkyboxConditionalCdfRT;
+        Vector4 m_CubemapScreenSize;
+        Matrix4x4[] m_facePixelCoordToViewDirMatrices = new Matrix4x4[6];
+        bool m_SupportsConvolution = false;
+        bool m_SupportsMIS = false;
+        BuiltinSkyParameters m_BuiltinParameters = new BuiltinSkyParameters();
+        bool m_NeedUpdate = true;
 
-        RTHandleSystem.RTHandle     m_SkyboxMarginalRowCdfRT;
-        RTHandleSystem.RTHandle     m_SkyboxConditionalCdfRT;
-        Vector4                     m_CubemapScreenSize;
-        Matrix4x4[]                 m_facePixelCoordToViewDirMatrices   = new Matrix4x4[6];
-        bool                        m_SupportsConvolution = false;
-        bool                        m_SupportsMIS = false;
-        BuiltinSkyParameters        m_BuiltinParameters = new BuiltinSkyParameters();
-        bool                        m_NeedUpdate = true;
-
-        ComputeShader               m_ComputeAmbientProbeCS;
-        ComputeBuffer               m_AmbientProbeResult;
-        SphericalHarmonicsL2        m_AmbientProbe;
-        readonly int                m_AmbientProbeOutputBufferParam = Shader.PropertyToID("_AmbientProbeOutputBuffer");
-        readonly int                m_AmbientProbeInputCubemap = Shader.PropertyToID("_AmbientProbeInputCubemap");
-        readonly int                m_AmbientProbeInputCubemapDimensions = Shader.PropertyToID("_AmbientProbeInputCubemapDimensions");
-        int                         m_ComputeAmbientProbeKernel;
+        ComputeShader m_ComputeAmbientProbeCS;
+        ComputeBuffer m_AmbientProbeResult;
+        SphericalHarmonicsL2 m_AmbientProbe;
+        readonly int m_AmbientProbeOutputBufferParam = Shader.PropertyToID("_AmbientProbeOutputBuffer");
+        readonly int m_AmbientProbeInputCubemap = Shader.PropertyToID("_AmbientProbeInputCubemap");
+        readonly int m_AmbientProbeInputCubemapDimensions = Shader.PropertyToID("_AmbientProbeInputCubemapDimensions");
+        int m_ComputeAmbientProbeKernel;
 
 
         public RenderTexture cubemapRT => m_SkyboxCubemapRT;
         public Texture reflectionTexture => m_SkyboxBSDFCubemapArray;
+        public Texture fogTexture => m_FogCubeMap;
         public SphericalHarmonicsL2 ambientProbe => m_AmbientProbe;
+
+        private int m_skyReflectionResolution = 0;
+
+#if FOG_USE_SINGLE_CUBEMAP
+        /// <summary>
+        /// 在移动平台上，不支持对HDR格式进行mimap，只能取0，对于需要skybox的地方，需要重新copy，
+        /// copy的时候直接取源图对应的mimaplevel即可，这是一个track。目前填1，看结果再优化
+        /// </summary>
+        private int m_FogCubeMapCopyMimimapLevel = 1;
+#endif
+
+        public float SkyTextureMipCount
+        {
+            get
+            {
+                return Mathf.Clamp(Mathf.Log((float)m_skyReflectionResolution, 2.0f) + 1, 0.0f, 6.0f);
+            }
+        }
 
         public SkyRenderingContext(IBLFilterBSDF[] iblFilterBDSDFArray, int resolution, bool supportsConvolution)
         {
@@ -48,7 +67,17 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             m_ComputeAmbientProbeCS = hdrp.renderPipelineResources.shaders.ambientProbeConvolutionCS;
             m_ComputeAmbientProbeKernel = m_ComputeAmbientProbeCS.FindKernel("AmbientProbeConvolution");
 
-            RebuildTextures(resolution);
+            m_skyReflectionResolution = resolution;
+            RebuildTextures(m_skyReflectionResolution);
+
+            foreach(IBLFilterBSDF filter in iblFilterBDSDFArray)
+            {
+                if(filter is IBLFilterGGX)
+                {
+                    ggxFilter = filter;
+                }
+            }
+           
         }
 
         public void RebuildTextures(int resolution)
@@ -72,28 +101,20 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
                 RTHandles.Release(m_SkyboxMarginalRowCdfRT);
                 m_SkyboxMarginalRowCdfRT = null;
+
+#if FOG_USE_SINGLE_CUBEMAP
+                CoreUtils.Destroy(m_FogCubeMap);
+                m_FogCubeMap = null;
+#endif
             }
 
             // Reallocate everything
             if (m_SkyboxCubemapRT == null)
             {
                 m_SkyboxCubemapRT = RTHandles.Alloc(resolution, resolution, colorFormat: UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16B16A16_SFloat), dimension: TextureDimension.Cube, useMipMap: true, autoGenerateMips: false, filterMode: FilterMode.Trilinear, name: "SkyboxCubemap");
-
                 if (m_SupportsConvolution)
                 {
                     m_SkyboxBSDFCubemapIntermediate = RTHandles.Alloc(resolution, resolution, colorFormat: UnityEngine.Experimental.Rendering.HDPipeline.HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16B16A16_SFloat), dimension: TextureDimension.Cube, useMipMap: true, autoGenerateMips: false, filterMode: FilterMode.Trilinear, name: "SkyboxBSDFIntermediate");
-
-#if SKYBOX_USE_SINGLE_BSDF_CUBEMAP
-                    m_SkyboxBSDFCubemapArray = new Cubemap(resolution, TextureFormat.RGBAHalf, true) {
-                        hideFlags = HideFlags.HideAndDontSave,
-                        wrapMode = TextureWrapMode.Repeat,
-                        wrapModeV = TextureWrapMode.Clamp,
-                        filterMode = FilterMode.Trilinear,
-                        anisoLevel = 0,
-                        name = "SkyboxCubemapConvolution"
-                    };
-
-#else
                     m_SkyboxBSDFCubemapArray = new CubemapArray(resolution, m_IBLFilterArray.Length, TextureFormat.RGBAHalf, true)
                     {
                         hideFlags = HideFlags.HideAndDontSave,
@@ -102,6 +123,19 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         filterMode = FilterMode.Trilinear,
                         anisoLevel = 0,
                         name = "SkyboxCubemapConvolution"
+                    };
+
+#if FOG_USE_SINGLE_CUBEMAP
+
+                    int res = resolution >> m_FogCubeMapCopyMimimapLevel;
+                    m_FogCubeMap = new Cubemap(res, TextureFormat.RGBAHalf, false)
+                    {
+                        hideFlags = HideFlags.HideAndDontSave,
+                        wrapMode = TextureWrapMode.Repeat,
+                        wrapModeV = TextureWrapMode.Clamp,
+                        filterMode = FilterMode.Trilinear,
+                        anisoLevel = 0,
+                        name = "FogCubeMap"
                     };
 #endif
 
@@ -152,6 +186,11 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 CoreUtils.Destroy(m_SkyboxBSDFCubemapArray);
             }
 
+#if FOG_USE_SINGLE_CUBEMAP
+            CoreUtils.Destroy(m_FogCubeMap);
+            ggxFilter = null;
+#endif
+
             m_AmbientProbeResult.Release();
 
             RTHandles.Release(m_SkyboxMarginalRowCdfRT);
@@ -180,25 +219,31 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         {
             using (new ProfilingSample(m_BuiltinParameters.commandBuffer, "Update Env: GGX Convolution"))
             {
-#if SKYBOX_USE_SINGLE_BSDF_CUBEMAP
-                m_IBLFilterArray[0].FilterCubemap(m_BuiltinParameters.commandBuffer, m_SkyboxCubemapRT, m_SkyboxBSDFCubemapIntermediate);
-                for (int i = 0; i < 6; ++i)
-                {
-                    m_BuiltinParameters.commandBuffer.CopyTexture(m_SkyboxBSDFCubemapIntermediate, i, m_SkyboxBSDFCubemapArray, i);
-                }
-#else
 
                 for (int bsdfIdx = 0; bsdfIdx < m_IBLFilterArray.Length; ++bsdfIdx)
                 {
+                    IBLFilterBSDF filter = m_IBLFilterArray[bsdfIdx];
                     // First of all filter this cubemap using the target filter
-                    m_IBLFilterArray[bsdfIdx].FilterCubemap(m_BuiltinParameters.commandBuffer, m_SkyboxCubemapRT, m_SkyboxBSDFCubemapIntermediate);
+                    filter.FilterCubemap(m_BuiltinParameters.commandBuffer, m_SkyboxCubemapRT, m_SkyboxBSDFCubemapIntermediate);
                     // Then copy it to the cubemap array slice
-                    for(int i = 0; i < 6; ++i)
+                    for (int i = 0; i < 6; ++i)
                     {
                         m_BuiltinParameters.commandBuffer.CopyTexture(m_SkyboxBSDFCubemapIntermediate, i, m_SkyboxBSDFCubemapArray, 6 * bsdfIdx + i);
                     }
-                }
+
+#if FOG_USE_SINGLE_CUBEMAP
+                    if (filter is IBLFilterGGX)
+                    {
+                        for (int i = 0; i < 6; ++i)
+                        {
+                            m_BuiltinParameters.commandBuffer.CopyTexture(m_SkyboxBSDFCubemapIntermediate,i, m_FogCubeMapCopyMimimapLevel, m_FogCubeMap, i,0);
+                        }
+                    }
 #endif
+
+                }
+
+
 
             }
         }
@@ -322,18 +367,24 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         if (m_SupportsConvolution)
                         {
                             CoreUtils.ClearCubemap(cmd, m_SkyboxBSDFCubemapIntermediate, Color.black, true);
-#if SKYBOX_USE_SINGLE_BSDF_CUBEMAP
-                            for (int face = 0; face < 6; ++face)
-                            {
-                                cmd.CopyTexture(m_SkyboxBSDFCubemapIntermediate, face, m_SkyboxBSDFCubemapArray, face);
-                            }  
-#else
+
                             for (int bsdfIdx = 0; bsdfIdx < m_IBLFilterArray.Length; ++bsdfIdx)
                             {
                                 for (int face = 0; face < 6; ++face)
+                                {
                                     cmd.CopyTexture(m_SkyboxBSDFCubemapIntermediate, face, m_SkyboxBSDFCubemapArray, 6 * bsdfIdx + face);
-                            }
+                                }
+#if FOG_USE_SINGLE_CUBEMAP
+                                IBLFilterBSDF filter = m_IBLFilterArray[bsdfIdx];
+                                if (filter is IBLFilterGGX)
+                                {
+                                    for (int i = 0; i < 6; ++i)
+                                    {
+                                        cmd.CopyTexture(m_SkyboxBSDFCubemapIntermediate, i, m_FogCubeMapCopyMimimapLevel, m_FogCubeMap, i, 0);
+                                    }
+                                }
 #endif
+                            }
 
                         }
                     }
