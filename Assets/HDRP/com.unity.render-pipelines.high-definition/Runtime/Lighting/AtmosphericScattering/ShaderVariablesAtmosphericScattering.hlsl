@@ -3,10 +3,6 @@
 #else
     TEXTURE3D(_VBufferLighting);
 	TEXTURECUBE_ARRAY(_SkyTexture);
-
-#ifdef FOG_USE_SINGLE_CUBEMAP
-	TEXTURECUBE(_FogTexture);
-#endif
 	
     #define _MipFogNear                     _MipFogParameters.x
     #define _MipFogFar                      _MipFogParameters.y

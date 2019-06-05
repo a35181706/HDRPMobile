@@ -20,15 +20,10 @@ float3 GetFogColor(float3 V, float fragDist)
     }
     else if (_FogColorMode == FOGCOLORMODE_SKY_COLOR)
     {
-#ifdef FOG_USE_SINGLE_CUBEMAP
-		return SAMPLE_TEXTURECUBE(_FogTexture, s_trilinear_clamp_sampler, -V);
-#else
 		// Based on Uncharted 4 "Mip Sky Fog" trick: http://advances.realtimerendering.com/other/2016/naughty_dog/NaughtyDog_TechArt_Final.pdf
 		float mipLevel = (1.0 - _MipFogMaxMip * saturate((fragDist - _MipFogNear) / (_MipFogFar - _MipFogNear))) * _SkyTextureMipCount;
 		// For the atmosphéric scattering, we use the GGX convoluted version of the cubemap. That matches the of the idnex 0
 		return SampleSkyTexture(-V, mipLevel, 0).rgb;
-#endif
-
     }
     else // Should not be possible.
         return  float3(0.0, 0.0, 0.0);

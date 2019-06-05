@@ -145,5 +145,4 @@
 #define USE_PACKED_SHADOWDATA //使用pakcedshadow
 #define USE_PACKED_LIGHTDATA //开启PackedLightData
 #define USE_PACKED_LIGHTLIST //开启USE_PACKED_LIGHTLIST
-#define FOG_USE_SINGLE_CUBEMAP //Fog使用单个CubeMap
 

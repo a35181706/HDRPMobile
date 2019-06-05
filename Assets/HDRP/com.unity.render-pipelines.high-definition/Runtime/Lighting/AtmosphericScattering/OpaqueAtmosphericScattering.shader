@@ -17,7 +17,7 @@ Shader "Hidden/HDRP/OpaqueAtmosphericScattering"
         float4x4 _PixelCoordToViewDirWS; // Actually just 3x3, but Unity can only set 4x4
 
         TEXTURE2D_X_MSAA(float, _DepthTextureMS);
-
+		
         struct Attributes
         {
             uint vertexID : SV_VertexID;

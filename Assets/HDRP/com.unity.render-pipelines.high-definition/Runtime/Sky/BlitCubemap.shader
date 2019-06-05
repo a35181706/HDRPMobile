@@ -1,4 +1,5 @@
 // Note: This shader is supposed to be removed at some point when Graphics.ConvertTexture can take a RenderTexture as a destination (it's only used by sky manager for now).
+//SOURCE_USE_LOD0 使用在移动平台，因为移动平台中，rt格式的cubemap调用GenrateMips有bug，只能生成一个面，所以需要手动来bit，并且使用LOD0级别
 Shader "Hidden/BlitCubemap" {
     SubShader {
         // Cubemap blit.  Takes a face index.
@@ -9,6 +10,7 @@ Shader "Hidden/BlitCubemap" {
             #pragma vertex vert
             #pragma fragment frag
             #pragma target 4.5
+			#pragma multi_compile _ SOURCE_USE_LOD0
 
             #include "Assets/HDRP/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
 
@@ -46,7 +48,11 @@ Shader "Hidden/BlitCubemap" {
 
             float4 frag (v2f i) : SV_Target
             {
-                return SAMPLE_TEXTURECUBE(_MainTex, sampler_MainTex, i.texcoord);
+#if SOURCE_USE_LOD0
+				return  SAMPLE_TEXTURECUBE_LOD(_MainTex, sampler_MainTex, i.texcoord,0);
+#else
+				return  SAMPLE_TEXTURECUBE(_MainTex, sampler_MainTex, i.texcoord);
+#endif
             }
             ENDHLSL
 
