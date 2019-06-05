@@ -90,12 +90,12 @@ MonoBehaviour:
       m_LutSize: 32
       lutFormat: 48
     dynamicResolutionSettings:
-      enabled: 0
+      enabled: 1
       maxPercentage: 100
       minPercentage: 100
       dynResType: 0
       upsampleFilter: 1
-      forceResolution: 0
+      forceResolution: 1
       forcedPercentage: 100
     lowresTransparentSettings:
       enabled: 0

@@ -159,7 +159,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             for (int i = 0; i < 6; ++i)
             {
                 m_BuiltinParameters.pixelCoordToViewDirMatrix = m_facePixelCoordToViewDirMatrices[i];
-                m_BuiltinParameters.colorBuffer = m_SkyboxCubemapRT;
+                m_BuiltinParameters.colorBuffer = m_SkyboxCubemapRTTemp;
                 m_BuiltinParameters.depthBuffer = null;
                 m_BuiltinParameters.hdCamera = null;
 
@@ -167,7 +167,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 skyContext.renderer.RenderSky(m_BuiltinParameters, true, skyContext.skySettings.includeSunInBaking.value);
             }
 
-            BlitCubemap(m_BuiltinParameters.commandBuffer, m_SkyboxCubemapRTTemp, m_SkyboxCubemapRT, (int)SkyTextureMipCount,true);
+            BlitCubemap(m_BuiltinParameters.commandBuffer, m_SkyboxCubemapRTTemp, m_SkyboxCubemapRT,true);
 #else
             for (int i = 0; i < 6; ++i)
             {
@@ -213,21 +213,15 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         /// <param name="cmd"></param>
         /// <param name="source"></param>
         /// <param name="dest"></param>
-        /// <param name="maxmipLevel">copy的最大等级,-1表示所有</param>
         /// <param name="useMips">使用mimap</param>
         /// <param name="SourceUseLOD0">在移动平台，source的mip可能生成失败，这个时候尝试设为true</param>
-        void BlitCubemap(CommandBuffer cmd, RenderTexture source, RenderTexture dest,int maxmipLevel = -1,bool useMips = false, bool SourceUseLOD0 = true)
+        void BlitCubemap(CommandBuffer cmd, RenderTexture source, RenderTexture dest,bool useMips = false, bool SourceUseLOD0 = true)
         {
             int mipCount = 1;
             if (useMips)
             {
                 m_BuiltinParameters.commandBuffer.GenerateMips(dest);
                 mipCount = 1 + (int)Mathf.Log(dest.width, 2.0f);
-                if(maxmipLevel > 0)
-                {
-                    mipCount = Mathf.Min(maxmipLevel, mipCount);
-                }
-              
             }
             var propertyBlock = new MaterialPropertyBlock();
             propertyBlock.SetTexture("_MainTex", source);
