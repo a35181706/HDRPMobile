@@ -345,7 +345,7 @@ namespace UnityEngine.Experimental.Rendering
         {
             get
             {
-                return !UnityEngine.Rendering.GraphicsSettings.HasShaderDefine(UnityEngine.Rendering.BuiltinShaderDefine.UNITY_NO_CUBEMAP_ARRAY);
+                return SystemInfo.supportsCubemapArrayTextures; //!UnityEngine.Rendering.GraphicsSettings.HasShaderDefine(UnityEngine.Rendering.BuiltinShaderDefine.UNITY_NO_CUBEMAP_ARRAY);
             }
         }
     }

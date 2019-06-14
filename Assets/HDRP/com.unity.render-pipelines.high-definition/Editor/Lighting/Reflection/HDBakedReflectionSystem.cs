@@ -241,7 +241,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         var probe = (HDProbe)EditorUtility.InstanceIDToObject(instanceId);
                         var bakedTexturePath = HDBakingUtilities.GetBakedTextureFilePath(probe);
                         AssetDatabase.ImportAsset(bakedTexturePath);
-                        ImportAssetAt(probe, bakedTexturePath);
+                        ImportAssetAt(probe,bakedTexturePath);
                     }
                     AssetDatabase.StopAssetEditing();
                 }
@@ -349,7 +349,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                     var probe = bakedProbes[i];
                     var bakedTexturePath = HDBakingUtilities.GetBakedTextureFilePath(probe);
                     AssetDatabase.ImportAsset(bakedTexturePath);
-                    ImportAssetAt(probe, bakedTexturePath);
+                    ImportAssetAt(probe,bakedTexturePath);
                 }
                 AssetDatabase.StopAssetEditing();
             }
@@ -366,7 +366,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                     "so it must exists in AssetDatabase");
 
                 // Update import settings
-                ImportAssetAt(probe, bakedTexturePath);
+                ImportAssetAt(probe,bakedTexturePath);
                 probe.SetTexture(ProbeSettings.Mode.Baked, bakedTexture);
                 AssignRenderData(probe, bakedTexturePath);
                 EditorUtility.SetDirty(probe);
@@ -552,7 +552,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             }
         }
 
-        internal static void ImportAssetAt(HDProbe probe, string file)
+        internal static void ImportAssetAt(HDProbe probe,string file)
         {
             var hd = (HDRenderPipeline)RenderPipelineManager.currentPipeline;
             switch (probe.settings.type)
@@ -573,6 +573,17 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         settings.aniso = 1;
                         importer.SetTextureSettings(settings);
                         importer.mipmapEnabled = false;
+
+                        TextureImporterPlatformSettings tip = importer.GetPlatformTextureSettings("Android");
+                        tip.format = TextureImporterFormat.RGBAHalf;
+                        tip.overridden = true;
+                        importer.SetPlatformTextureSettings(tip);
+
+                        tip = importer.GetPlatformTextureSettings("iPhone");
+                        tip.format = TextureImporterFormat.RGBAHalf;
+                        tip.overridden = true;
+                        importer.SetPlatformTextureSettings(tip);
+
                         importer.textureCompression = hd.currentPlatformRenderPipelineSettings.lightLoopSettings.reflectionCacheCompressed
                             ? TextureImporterCompression.Compressed
                             : TextureImporterCompression.Uncompressed;

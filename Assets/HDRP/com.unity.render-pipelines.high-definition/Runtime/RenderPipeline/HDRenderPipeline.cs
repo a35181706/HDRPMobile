@@ -3738,7 +3738,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         }
 
         /// <summary>
-        /// ¸ù¾ÝPlatformÀ´ÇÐ»»RT¸ñÊ½
+        /// ï¿½ï¿½ï¿½ï¿½Platformï¿½ï¿½ï¿½Ð»ï¿½RTï¿½ï¿½Ê½
         /// </summary>
         /// <param name="source"></param>
         /// <returns></returns>
@@ -3770,8 +3770,103 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 return source;
             //}
 
-            //Debug.LogError("²»Ö§³ÖµÄÆ½Ì¨:" + Application.platform + ",¸ñÊ½:" + source);
+            //Debug.LogError("ï¿½ï¿½Ö§ï¿½Öµï¿½Æ½Ì¨:" + Application.platform + ",ï¿½ï¿½Ê½:" + source);
             //return source;
+        }
+
+        /// <summary>
+        /// ï¿½ï¿½ï¿½ÏµÍ³feature
+        /// </summary>
+        /// <returns></returns>
+        public static bool CheckSystemFeature()
+        {
+            if (!SystemInfo.supportsCubemapArrayTextures)
+            {
+                Debug.LogError("Not support cubemaparray!");
+                return false;
+            }
+
+            if (!SystemInfo.supports2DArrayTextures)
+            {
+                Debug.LogError("Not support tex2d array!");
+                return false;
+            }
+
+            return true;
+        }
+
+        private static Material generateRTMIPSMat = null;
+        public static void RT_GenerateMips(CommandBuffer cmd, RenderTexture source)
+        {
+            if (!source)
+            {
+                return;
+            }
+
+            Debug.Assert(source.autoGenerateMips == false);
+
+            if (source.dimension != TextureDimension.Cube && source.dimension != TextureDimension.Tex2D)
+            {
+                Debug.LogError("not support rt dimension:" + source.dimension);
+                return;
+            }
+
+            if (!generateRTMIPSMat)
+            {
+
+                var hdrp = GraphicsSettings.renderPipelineAsset as HDRenderPipelineAsset;
+                generateRTMIPSMat = CoreUtils.CreateEngineMaterial(hdrp.renderPipelineResources.shaders.blitCubeTextureFacePS);
+            }
+
+            if (source.dimension == TextureDimension.Tex2D) 
+            {
+                cmd.GenerateMips(source);
+                return;
+            }
+
+            if (source.dimension == TextureDimension.Cube)
+            {
+                RenderTextureDescriptor desc = new RenderTextureDescriptor();
+                desc.width = source.width;
+                desc.height = source.height;
+                desc.graphicsFormat = source.graphicsFormat;
+                desc.dimension = source.dimension;
+                desc.useMipMap = false;
+                desc.volumeDepth = source.volumeDepth;
+                desc.msaaSamples = source.antiAliasing;
+                desc.memoryless = source.memorylessMode;
+                
+                RenderTexture rt =  RenderTexture.GetTemporary(desc);
+                rt.filterMode = source.filterMode;
+                rt.wrapMode = source.wrapMode;
+                rt.anisoLevel = source.anisoLevel;
+                //copy mip0
+                for (int i = 0; i < 6; i++)
+                {
+                    cmd.CopyTexture(source, i, 0, rt, i, 0);
+
+                }
+                int mipCount = 1 + (int)Mathf.Log(Mathf.Max(source.width, source.height), 2.0f);
+                cmd.GenerateMips(source);
+
+                var propertyBlock = new MaterialPropertyBlock();
+                propertyBlock.SetTexture("_InputTex", rt);
+                for (int mip = 1; mip < mipCount; mip++)
+                generateRTMIPSMat.SetFloat("_LoD", 0);
+                for (int mip = 1; mip < mipCount; mip++)
+                {
+                    for (int i = 0; i < 6; ++i)
+                    {
+                        CoreUtils.SetRenderTarget(cmd, source, ClearFlag.None, mip, (CubemapFace)i);
+                        propertyBlock.SetFloat("_FaceIndex", (float)i);
+                        cmd.DrawProcedural(Matrix4x4.identity, generateRTMIPSMat, 0, MeshTopology.Triangles, 3, 1, propertyBlock);
+                    }
+                }
+
+
+                RenderTexture.ReleaseTemporary(rt);
+            }
+
         }
     }
 }

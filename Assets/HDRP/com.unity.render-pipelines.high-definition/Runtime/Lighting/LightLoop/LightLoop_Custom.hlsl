@@ -114,6 +114,11 @@ void ApplyDebug(LightLoopContext lightLoopContext, PositionInputs posInput, BSDF
 #endif
 }
 
+//-----------------------------------------------------------------------------
+// EvaluateBSDF_Env
+// ----------------------------------------------------------------------------
+
+// _preIntegratedFGD and _CubemapLD are unique for each BRDF
 void LightLoop_EnvAndSkyAndSSR(LightLoopContext context, float3 V, PositionInputs posInput, PreLightData preLightData, BSDFData bsdfData, BuiltinData builtinData, uint featureFlags,
 	inout AggregateLighting aggregateLighting)
 {

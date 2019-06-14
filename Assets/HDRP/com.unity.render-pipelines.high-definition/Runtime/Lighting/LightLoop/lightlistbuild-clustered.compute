@@ -508,7 +508,7 @@ void LIGHTLISTGEN(uint threadID : SV_GroupIndex, uint3 u3GroupID : SV_GroupID)
 
 	for (int ll = 0; ll < iNrCoarseLights; ll += 4)
 	{
-		[BRANCH] if (i < 24)
+		UNITY_BRANCH if (i < 24)
 		{
 			lightPlanes[6 * m + p] = FetchPlane(min(iNrCoarseLights - 1, ll + m), p, eyeIndex);
 		}

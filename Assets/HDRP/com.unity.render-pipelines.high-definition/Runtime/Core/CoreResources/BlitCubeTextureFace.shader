@@ -57,7 +57,7 @@ Shader "Hidden/SRP/BlitCubeTextureFace"
 
             float4 frag (Varyings input) : SV_Target
             {
-                return SAMPLE_TEXTURECUBE_LOD(_InputTex, sampler_InputTex, input.texcoord, _LoD);
+				return SAMPLE_TEXTURECUBE_LOD(_InputTex, sampler_InputTex, input.texcoord, _LoD);
             }
 
             ENDHLSL

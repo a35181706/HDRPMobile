@@ -279,23 +279,6 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             }
         }
 
-        void BlitCubemap(CommandBuffer cmd, Cubemap source, RenderTexture dest)
-        {
-            var propertyBlock = new MaterialPropertyBlock();
-
-            for (int i = 0; i < 6; ++i)
-            {
-                CoreUtils.SetRenderTarget(cmd, dest, ClearFlag.None, 0, (CubemapFace)i);
-                propertyBlock.SetTexture("_MainTex", source);
-                propertyBlock.SetFloat("_faceIndex", (float)i);
-                cmd.DrawProcedural(Matrix4x4.identity, m_BlitCubemapMaterial, 0, MeshTopology.Triangles, 3, 1, propertyBlock);
-            }
-
-            // Generate mipmap for our cubemap
-            Debug.Assert(dest.autoGenerateMips == false);
-            cmd.GenerateMips(dest);
-        }
-
         public void RequestEnvironmentUpdate()
         {
             m_UpdateRequired = true;

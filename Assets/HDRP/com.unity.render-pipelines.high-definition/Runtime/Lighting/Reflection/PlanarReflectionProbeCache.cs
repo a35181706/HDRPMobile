@@ -140,7 +140,8 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                     cmd.CopyTexture(texture2D, 0, 0, m_TempRenderTexture, 0, 0);
 
                 // Ideally if input is not compressed and has mipmaps, don't do anything here. Problem is, we can't know if mips have been already convolved offline...
-                cmd.GenerateMips(m_TempRenderTexture);
+                //cmd.GenerateMips(m_TempRenderTexture);
+                HDRenderPipeline.RT_GenerateMips(cmd, m_TempRenderTexture);
                 convolutionSourceTexture = m_TempRenderTexture;
             }
             else
@@ -163,7 +164,8 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                     convolutionSourceTexture = renderTexture;
                 // Generate unfiltered mipmaps as a base for convolution
                 // TODO: Make sure that we don't first convolve everything on the GPU with the legacy code path executed after rendering the probe.
-                cmd.GenerateMips(convolutionSourceTexture);
+                //cmd.GenerateMips(convolutionSourceTexture);
+                HDRenderPipeline.RT_GenerateMips(cmd, convolutionSourceTexture);
             }
 
             m_IBLFilterGGX.FilterPlanarTexture(cmd, convolutionSourceTexture, m_ConvolutionTargetTexture);

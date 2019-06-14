@@ -1,4 +1,4 @@
-#define NOT_SOUPPORT_CUBEMAP_RT_MIPS
+
 using UnityEngine.Rendering;
 using System;
 
@@ -10,16 +10,12 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         RTHandleSystem.RTHandle m_SkyboxCubemapRT;
 
         /// <summary>
-        /// 用于copy多个bsdf的cubemap
+        /// 锟斤拷锟斤拷copy锟斤拷锟絙sdf锟斤拷cubemap
         /// </summary>
         RTHandleSystem.RTHandle m_SkyboxBSDFCubemapIntermediate;
 
         CubemapArray m_SkyboxBSDFCubemapArray;
 
-#if NOT_SOUPPORT_CUBEMAP_RT_MIPS
-        RTHandleSystem.RTHandle m_SkyboxCubemapRTTemp;
-        Material m_BlitCubemapMaterial;
-#endif
         Vector4 m_CubemapScreenSize;
         Matrix4x4[] m_facePixelCoordToViewDirMatrices = new Matrix4x4[6];
         bool m_SupportsConvolution = false;
@@ -66,9 +62,6 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
             m_skyReflectionResolution = resolution;
             RebuildTextures(m_skyReflectionResolution);
-#if NOT_SOUPPORT_CUBEMAP_RT_MIPS
-            m_BlitCubemapMaterial = CoreUtils.CreateEngineMaterial(hdrp.renderPipelineResources.shaders.blitCubemapPS);
-#endif
         }
 
         public void RebuildTextures(int resolution)
@@ -84,10 +77,6 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 RTHandles.Release(m_SkyboxBSDFCubemapIntermediate);
                 m_SkyboxBSDFCubemapIntermediate = null;
 
-#if NOT_SOUPPORT_CUBEMAP_RT_MIPS
-                RTHandles.Release(m_SkyboxCubemapRTTemp);
-                m_SkyboxCubemapRTTemp = null;
-#endif
                 CoreUtils.Destroy(m_SkyboxBSDFCubemapArray);
                 m_SkyboxBSDFCubemapArray = null;
             }
@@ -109,10 +98,6 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         name = "SkyboxCubemapConvolution"
                     };
                 }
-
-#if NOT_SOUPPORT_CUBEMAP_RT_MIPS
-                m_SkyboxCubemapRTTemp = RTHandles.Alloc(resolution, resolution, colorFormat: HDRenderPipeline.OverrideRTGraphicsFormat(GraphicsFormat.R16G16B16A16_SFloat), dimension: TextureDimension.Cube, useMipMap: false, autoGenerateMips: false, filterMode: FilterMode.Trilinear, name: "SkyboxCubemapRTTemp");
-#endif
             }
 
             m_CubemapScreenSize = new Vector4((float)resolution, (float)resolution, 1.0f / (float)resolution, 1.0f / (float)resolution);
@@ -142,10 +127,6 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             RTHandles.Release(m_SkyboxCubemapRT);
             RTHandles.Release(m_SkyboxBSDFCubemapIntermediate);
 
-
-#if NOT_SOUPPORT_CUBEMAP_RT_MIPS
-            RTHandles.Release(m_SkyboxCubemapRTTemp);
-#endif
             if (m_SkyboxBSDFCubemapArray != null)
             {
                 CoreUtils.Destroy(m_SkyboxBSDFCubemapArray);
@@ -155,20 +136,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
         void RenderSkyToCubemap(SkyUpdateContext skyContext)
         {
-#if NOT_SOUPPORT_CUBEMAP_RT_MIPS
-            for (int i = 0; i < 6; ++i)
-            {
-                m_BuiltinParameters.pixelCoordToViewDirMatrix = m_facePixelCoordToViewDirMatrices[i];
-                m_BuiltinParameters.colorBuffer = m_SkyboxCubemapRTTemp;
-                m_BuiltinParameters.depthBuffer = null;
-                m_BuiltinParameters.hdCamera = null;
 
-                CoreUtils.SetRenderTarget(m_BuiltinParameters.commandBuffer, m_SkyboxCubemapRTTemp, ClearFlag.None, 0, (CubemapFace)i);
-                skyContext.renderer.RenderSky(m_BuiltinParameters, true, skyContext.skySettings.includeSunInBaking.value);
-            }
-
-            BlitCubemap(m_BuiltinParameters.commandBuffer, m_SkyboxCubemapRTTemp, m_SkyboxCubemapRT,true);
-#else
             for (int i = 0; i < 6; ++i)
             {
                 m_BuiltinParameters.pixelCoordToViewDirMatrix = m_facePixelCoordToViewDirMatrices[i];
@@ -182,10 +150,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
             // Generate mipmap for our cubemap
             Debug.Assert(m_SkyboxCubemapRT.rt.autoGenerateMips == false);
-            m_BuiltinParameters.commandBuffer.GenerateMips(m_SkyboxCubemapRT);
-#endif
-
-
+            HDRenderPipeline.RT_GenerateMips(m_BuiltinParameters.commandBuffer, m_SkyboxCubemapRT);
 
         }
 
@@ -206,41 +171,6 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 }
             }
         }
-#if NOT_SOUPPORT_CUBEMAP_RT_MIPS
-        /// <summary>
-        /// 拷贝cubemap
-        /// </summary>
-        /// <param name="cmd"></param>
-        /// <param name="source"></param>
-        /// <param name="dest"></param>
-        /// <param name="useMips">使用mimap</param>
-        /// <param name="SourceUseLOD0">在移动平台，source的mip可能生成失败，这个时候尝试设为true</param>
-        void BlitCubemap(CommandBuffer cmd, RenderTexture source, RenderTexture dest,bool useMips = false, bool SourceUseLOD0 = true)
-        {
-            int mipCount = 1;
-            if (useMips)
-            {
-                m_BuiltinParameters.commandBuffer.GenerateMips(dest);
-                mipCount = 1 + (int)Mathf.Log(dest.width, 2.0f);
-            }
-            var propertyBlock = new MaterialPropertyBlock();
-            propertyBlock.SetTexture("_MainTex", source);
-            if (SourceUseLOD0)
-            {
-                m_BlitCubemapMaterial.EnableKeyword("SOURCE_USE_LOD0");
-            }
-            for (int mip = 0;mip < mipCount;mip++)
-            {
-                for (int i = 0; i < 6; ++i)
-                {
-                    CoreUtils.SetRenderTarget(cmd, dest, ClearFlag.None, mip, (CubemapFace)i);
-                    propertyBlock.SetFloat("_faceIndex", (float)i);
-                    cmd.DrawProcedural(Matrix4x4.identity, m_BlitCubemapMaterial, 0, MeshTopology.Triangles, 3, 1, propertyBlock);
-                }
-            }
-
-        }
-#endif
         // We do our own hash here because Unity does not provide correct hash for builtin types
         // Moreover, we don't want to test every single parameters of the light so we filter them here in this specific function.
         int GetSunLightHashCode(Light light)
