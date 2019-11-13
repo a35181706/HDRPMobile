@@ -110,10 +110,10 @@ public class HDRPTools
 
         foreach (string csFile in allFile)
         {
-            if (csFile.EndsWith(".meta"))
-            {
-                continue;
-            }
+            //if (csFile.EndsWith(".meta"))
+            //{
+            //    continue;
+            //}
             string excFolderPath = csFile.Replace("\\","/");
             excFolderPath = excFolderPath.Replace(hdrpFolder,string.Empty);
 

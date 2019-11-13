@@ -38,7 +38,7 @@ public class InstanceRendererSystem : ComponentSystem
         
     }
 
-	protected override void OnCreateManager()
+	protected override void OnCreate()
 	{
         m_InstanceRendererGroup = GetEntityQuery(ComponentType.ReadOnly<InstanceRenderer>(),
             ComponentType.ReadOnly<LocalToWorld>(),
@@ -63,7 +63,7 @@ public class InstanceRendererSystem : ComponentSystem
         }
     }
 
-    protected override void OnDestroyManager()
+    protected override void OnDestroy()
     {
         if (null != m_RenderCommandBuffer)
         {

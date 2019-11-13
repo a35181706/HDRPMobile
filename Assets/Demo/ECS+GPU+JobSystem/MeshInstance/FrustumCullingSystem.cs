@@ -198,7 +198,7 @@ public class FrustumCullingSystem : JobComponentSystem
     EndSimulationEntityCommandBufferSystem bannair;
 
     private Plane[] cameraPlanes;
-    protected override void OnCreateManager()
+    protected override void OnCreate()
     {
         cameraPlanes = new Plane[6];
 
@@ -232,7 +232,7 @@ public class FrustumCullingSystem : JobComponentSystem
                 planes[numCameras-Camera.allCamerasCount+i] = generatePlane(Camera.allCameras[i]);
         }
 
-        int Length = boudingSpheres.CalculateLength();
+        int Length = boudingSpheres.CalculateEntityCount();
         var centers = new NativeArray<float4>((Length + 3) & ~3, Allocator.TempJob);
         var cullStatus = new NativeArray<float4>((Length + 3) & ~3, Allocator.TempJob);
         var oldCullStatus = new NativeArray<float4>((Length + 3) & ~3, Allocator.TempJob);

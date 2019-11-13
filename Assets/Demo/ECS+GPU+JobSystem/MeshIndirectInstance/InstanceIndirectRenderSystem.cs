@@ -44,7 +44,7 @@ public class InstanceIndirectRenderSystem : ComponentSystem
 
     }
 
-    protected override void OnCreateManager()
+    protected override void OnCreate()
     {
         m_InstanceRendererGroup = GetEntityQuery(ComponentType.ReadOnly<InstanceIndirectRenderer>(),
             ComponentType.ReadOnly<LocalToWorld>(),
@@ -129,7 +129,7 @@ public class InstanceIndirectRenderSystem : ComponentSystem
         m_CacheduniqueRendererTypes.Clear();
     }
 
-    protected override void OnDestroyManager()
+    protected override void OnDestroy()
     {
         if (m_TransformBuffers != null)
         {
